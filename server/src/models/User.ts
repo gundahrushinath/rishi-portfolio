@@ -1,12 +1,20 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
+  emailVerified: boolean;
+  verificationToken?: string;
+  verificationTokenExpires?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  generateVerificationToken(): string;
+  generatePasswordResetToken(): string;
 }
 
 const userSchema = new Schema<IUser>({
@@ -27,6 +35,26 @@ const userSchema = new Schema<IUser>({
     type: String,
     required: [true, 'Name is required'],
     trim: true
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: {
+    type: String,
+    select: false
+  },
+  verificationTokenExpires: {
+    type: Date,
+    select: false
+  },
+  resetPasswordToken: {
+    type: String,
+    select: false
+  },
+  resetPasswordExpires: {
+    type: Date,
+    select: false
   },
   createdAt: {
     type: Date,
@@ -50,6 +78,22 @@ userSchema.pre('save', async function(next) {
 // Method to compare passwords
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Generate email verification token
+userSchema.methods.generateVerificationToken = function(): string {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.verificationToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  return token;
+};
+
+// Generate password reset token
+userSchema.methods.generatePasswordResetToken = function(): string {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  return token;
 };
 
 const User = mongoose.model<IUser>('User', userSchema);

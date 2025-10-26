@@ -1,24 +1,30 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserPlus, Mail, CheckCircle } from 'lucide-react';
+import { Lock, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
-export default function SignUpPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+
+  useEffect(() => {
+    if (!token) {
+      setError('Invalid reset link');
+    }
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +44,18 @@ export default function SignUpPage() {
 
     try {
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/signup`,
-        { email, password, name }
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/reset-password?token=${token}`,
+        { password }
       );
-      
+
       setSuccess(true);
+
+      // Redirect to signin after 3 seconds
+      setTimeout(() => {
+        router.push('/signin');
+      }, 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to sign up');
+      setError(err.response?.data?.message || 'Failed to reset password');
     } finally {
       setLoading(false);
     }
@@ -58,37 +69,26 @@ export default function SignUpPage() {
             <div className="flex items-center justify-center mb-4">
               <CheckCircle className="h-10 w-10 text-green-400" />
             </div>
-            <CardTitle className="text-2xl text-center text-white">Check Your Email!</CardTitle>
+            <CardTitle className="text-2xl text-center text-white">Password Reset!</CardTitle>
             <CardDescription className="text-center text-slate-400">
-              We've sent a verification link to {email}
+              Your password has been successfully reset
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-blue-500/10 border border-blue-500 text-blue-400 px-4 py-3 rounded-md text-sm">
-              <p className="font-semibold mb-2 flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Verification Email Sent
-              </p>
-              <p className="mb-2">
-                Please check your inbox and click the verification link to activate your account.
-              </p>
-              <p className="text-xs">
-                The link will expire in 24 hours. If you don't see it, check your spam folder.
-              </p>
+            <div className="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-md text-sm">
+              <p className="font-semibold mb-1">✓ Success!</p>
+              <p>You can now sign in with your new password.</p>
             </div>
-            <div className="text-center space-y-2">
+            <div className="text-center">
+              <p className="text-slate-300 mb-4">
+                Redirecting to sign in page in 3 seconds...
+              </p>
               <Button
                 onClick={() => router.push('/signin')}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                Go to Sign In
+                Sign In Now
               </Button>
-              <p className="text-xs text-slate-400">
-                Already verified?{' '}
-                <Link href="/signin" className="text-blue-400 hover:text-blue-300">
-                  Sign in now
-                </Link>
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -101,11 +101,11 @@ export default function SignUpPage() {
       <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <UserPlus className="h-10 w-10 text-blue-400" />
+            <Lock className="h-10 w-10 text-blue-400" />
           </div>
-          <CardTitle className="text-2xl text-center text-white">Create an Account</CardTitle>
+          <CardTitle className="text-2xl text-center text-white">Reset Password</CardTitle>
           <CardDescription className="text-center text-slate-400">
-            Join us and get access to exclusive content
+            Enter your new password below
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -116,31 +116,7 @@ export default function SignUpPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-white">Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-white">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-white">Password</Label>
+              <Label htmlFor="password" className="text-white">New Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -148,11 +124,13 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={!token}
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
               />
+              <p className="text-xs text-slate-400">Minimum 6 characters</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-white">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-white">Confirm New Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -160,26 +138,21 @@ export default function SignUpPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                disabled={!token}
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
             <Button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700"
-              disabled={loading}
+              disabled={loading || !token}
             >
-              {loading ? 'Creating account...' : 'Sign Up'}
+              {loading ? 'Resetting...' : 'Reset Password'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-slate-400">
-            Already have an account?{' '}
-            <Link href="/signin" className="text-blue-400 hover:text-blue-300">
-              Sign in
-            </Link>
-          </div>
-          <div className="mt-4 text-center">
-            <Link href="/" className="text-sm text-slate-400 hover:text-slate-300">
-              ← Back to home
+          <div className="mt-6 text-center">
+            <Link href="/signin" className="text-sm text-blue-400 hover:text-blue-300">
+              ← Back to sign in
             </Link>
           </div>
         </CardContent>
