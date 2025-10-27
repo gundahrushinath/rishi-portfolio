@@ -45,9 +45,8 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
-        <CardHeader className="text-center space-y-4">
+    <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
+      <CardHeader className="text-center space-y-4">
           {status === 'loading' && (
             <>
               <div className="flex justify-center">
@@ -119,6 +118,5 @@ export default function VerifyEmailPage() {
           )}
         </CardContent>
       </Card>
-    </div>
   );
 }

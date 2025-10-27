@@ -63,11 +63,10 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-center mb-4">
-              <CheckCircle className="h-10 w-10 text-green-400" />
+      <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center justify-center mb-4">
+            <CheckCircle className="h-10 w-10 text-green-400" />
             </div>
             <CardTitle className="text-2xl text-center text-white">Password Reset!</CardTitle>
             <CardDescription className="text-center text-slate-400">
@@ -92,13 +91,11 @@ export default function ResetPasswordPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
+    <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <Lock className="h-10 w-10 text-blue-400" />
@@ -120,7 +117,7 @@ export default function ResetPasswordPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Enter new password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -134,7 +131,7 @@ export default function ResetPasswordPage() {
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -157,6 +154,5 @@ export default function ResetPasswordPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
   );
 }

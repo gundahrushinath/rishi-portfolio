@@ -36,11 +36,10 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-center mb-4">
-              <CheckCircle className="h-10 w-10 text-green-400" />
+      <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center justify-center mb-4">
+            <CheckCircle className="h-10 w-10 text-green-400" />
             </div>
             <CardTitle className="text-2xl text-center text-white">Check Your Email</CardTitle>
             <CardDescription className="text-center text-slate-400">
@@ -72,13 +71,11 @@ export default function ForgotPasswordPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
+    <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <KeyRound className="h-10 w-10 text-blue-400" />
@@ -102,7 +99,7 @@ export default function ForgotPasswordPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="Enter Email Address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -131,6 +128,5 @@ export default function ForgotPasswordPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
   );
 }
