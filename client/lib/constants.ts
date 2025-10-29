@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, BookOpen, Settings } from 'lucide-react';
+import { LayoutDashboard, FileText, BookOpen, Settings, StickyNote, Book, CheckSquare } from 'lucide-react';
 
 export const DASHBOARD_NAVIGATION = [
   {
@@ -15,6 +15,21 @@ export const DASHBOARD_NAVIGATION = [
     title: 'Resources',
     icon: BookOpen,
     href: '/dashboard/resources',
+  },
+  {
+    title: 'Notes',
+    icon: StickyNote,
+    href: '/dashboard/notes',
+  },
+  {
+    title: 'Diary',
+    icon: Book,
+    href: '/dashboard/diary',
+  },
+  {
+    title: 'Todos',
+    icon: CheckSquare,
+    href: '/dashboard/todos',
   },
   {
     title: 'Settings',

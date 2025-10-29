@@ -1,15 +1,70 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { todoService, TodoInput } from '@/lib/api';
 import { Todo } from '@/models/dashboard';
+import { DASHBOARD_NAVIGATION } from '@/lib/constants';
+import { Loading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { toast } from '@/lib/toast';
-import { Plus, Trash2, Edit2, X, CheckSquare, Square, BarChart3, Calendar } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, CheckSquare, Square, BarChart3, Calendar, Home, LogOut, User, Bell, LayoutDashboard, Settings } from 'lucide-react';
+
+function DashboardSidebar() {
+  const router = useRouter();
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {DASHBOARD_NAVIGATION.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton onClick={() => router.push(item.href)} tooltip={item.title}>
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="border-t p-3">
+        <SidebarTrigger className="w-full h-9" />
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'] as const;
 const STATUS_OPTIONS = ['Todo', 'In Progress', 'Completed', 'Cancelled'] as const;
@@ -223,19 +278,97 @@ export default function TodoPage() {
     return new Date(dueDate) < new Date() && !['Completed', 'Cancelled'].includes(formData.status || '');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading todos...</div>
-      </div>
-    );
+  const { user, loading: authLoading, isAuthenticated, signout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/signin');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  if (loading || authLoading) {
+    return <Loading fullScreen text="Loading todos..." />;
   }
 
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+
+  const userInitials = user.name
+    ?.split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase() || 'U';
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <DashboardSidebar />
+        
+        <div className="flex-1 flex flex-col">
+          {/* Topbar */}
+          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold">Todos</h1>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon">
+                <Bell className="h-5 w-5" />
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar>
+                      <AvatarImage src="" alt={user.name} />
+                      <AvatarFallback>{userInitials}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push('/')}>
+                    <Home className="mr-2 h-4 w-4" />
+                    Home
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signout()} variant="destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 p-6">
+      <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">To-Do List</h1>
+          <h2 className="text-3xl font-bold tracking-tight">To-Do List</h2>
           <p className="text-muted-foreground">Manage your tasks efficiently</p>
         </div>
         <div className="flex gap-2">
@@ -252,7 +385,7 @@ export default function TodoPage() {
 
       {/* Statistics Dashboard */}
       {showStats && statistics && (
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Total Tasks</CardDescription>
@@ -493,7 +626,7 @@ export default function TodoPage() {
                   id="notes"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full min-h-[80px] px-3 py-2 border rounded-md"
+                  className="w-full min-h-20 px-3 py-2 border rounded-md"
                   placeholder="Additional notes..."
                 />
               </div>
@@ -634,5 +767,9 @@ export default function TodoPage() {
         </div>
       )}
     </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }

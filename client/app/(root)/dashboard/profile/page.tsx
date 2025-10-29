@@ -4,18 +4,17 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loading } from '@/components/ui/loading';
+import { DASHBOARD_NAVIGATION } from '@/lib/constants';
 import { 
-  LayoutDashboard, 
   Home, 
-  FileText, 
-  Settings, 
-  BookOpen,
   LogOut,
   User,
   Bell,
   Mail,
   Calendar,
-  MapPin
+  MapPin,
+  LayoutDashboard,
+  Settings
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -46,29 +45,6 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
-const navigationItems = [
-  {
-    title: 'Overview',
-    icon: LayoutDashboard,
-    href: '/dashboard',
-  },
-  {
-    title: 'Projects',
-    icon: FileText,
-    href: '/dashboard/projects',
-  },
-  {
-    title: 'Resources',
-    icon: BookOpen,
-    href: '/dashboard/resources',
-  },
-  {
-    title: 'Settings',
-    icon: Settings,
-    href: '/dashboard/settings',
-  },
-];
-
 function DashboardSidebar() {
   const router = useRouter();
 
@@ -79,7 +55,7 @@ function DashboardSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
+              {DASHBOARD_NAVIGATION.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton onClick={() => router.push(item.href)} tooltip={item.title}>
                     <item.icon className="h-5 w-5 shrink-0" />
