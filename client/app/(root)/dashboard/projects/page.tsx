@@ -12,11 +12,16 @@ import {
   BookOpen,
   LogOut,
   User,
-  Bell
+  Bell,
+  Plus,
+  ExternalLink,
+  Calendar,
+  Tag
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +44,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { Badge } from '@/components/ui/badge';
 
 const navigationItems = [
   {
@@ -60,6 +66,41 @@ const navigationItems = [
     title: 'Settings',
     icon: Settings,
     href: '/dashboard/settings',
+  },
+];
+
+const projects = [
+  {
+    id: 1,
+    title: 'Portfolio Website',
+    description: 'Modern portfolio built with Next.js and TypeScript',
+    status: 'Active',
+    tags: ['Next.js', 'TypeScript', 'Tailwind'],
+    date: 'Oct 2025',
+  },
+  {
+    id: 2,
+    title: 'E-commerce Platform',
+    description: 'Full-stack e-commerce solution with payment integration',
+    status: 'In Progress',
+    tags: ['React', 'Node.js', 'MongoDB'],
+    date: 'Sep 2025',
+  },
+  {
+    id: 3,
+    title: 'Task Management App',
+    description: 'Collaborative task management with real-time updates',
+    status: 'Completed',
+    tags: ['React', 'Firebase', 'Material-UI'],
+    date: 'Aug 2025',
+  },
+  {
+    id: 4,
+    title: 'Weather Dashboard',
+    description: 'Weather forecasting app with interactive maps',
+    status: 'Active',
+    tags: ['Vue.js', 'API', 'Charts'],
+    date: 'Oct 2025',
   },
 ];
 
@@ -92,7 +133,7 @@ function DashboardSidebar() {
   );
 }
 
-export default function DashboardPage() {
+export default function ProjectsPage() {
   const { user, loading, isAuthenticated, signout } = useAuth();
   const router = useRouter();
 
@@ -103,7 +144,7 @@ export default function DashboardPage() {
   }, [loading, isAuthenticated, router]);
 
   if (loading) {
-    return <Loading fullScreen text="Loading dashboard..." />;
+    return <Loading fullScreen text="Loading projects..." />;
   }
 
   if (!isAuthenticated || !user) {
@@ -125,10 +166,15 @@ export default function DashboardPage() {
           {/* Topbar */}
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
             <div className="flex-1">
-              <h1 className="text-xl font-semibold">Welcome back, {user.name}!</h1>
+              <h1 className="text-xl font-semibold">Projects</h1>
             </div>
 
             <div className="flex items-center gap-4">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+
               <Button variant="ghost" size="icon">
                 <Bell className="h-5 w-5" />
               </Button>
@@ -181,49 +227,92 @@ export default function DashboardPage() {
           {/* Main Content */}
           <main className="flex-1 p-6">
             <div className="space-y-6">
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
-                <p className="text-muted-foreground">
-                  Manage your portfolio and access exclusive resources
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold tracking-tight">My Projects</h2>
+                  <p className="text-muted-foreground">
+                    Manage and track your portfolio projects
+                  </p>
+                </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <FileText className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Projects</p>
-                      <p className="text-2xl font-bold">12</p>
-                    </div>
-                  </div>
-                </div>
+              {/* Project Stats */}
+              <div className="grid gap-4 md:grid-cols-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">12</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Active</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">6</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">3</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">3</div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <BookOpen className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Resources</p>
-                      <p className="text-2xl font-bold">48</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <Bell className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Notifications</p>
-                      <p className="text-2xl font-bold">3</p>
-                    </div>
-                  </div>
-                </div>
+              {/* Projects Grid */}
+              <div className="grid gap-4 md:grid-cols-2">
+                {projects.map((project) => (
+                  <Card key={project.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-xl">{project.title}</CardTitle>
+                          <CardDescription>{project.description}</CardDescription>
+                        </div>
+                        <Badge variant={project.status === 'Completed' ? 'default' : 'secondary'}>
+                          {project.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        {project.tags.map((tag) => (
+                          <Badge key={tag} variant="outline">
+                            <Tag className="h-3 w-3 mr-1" />
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          {project.date}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           </main>

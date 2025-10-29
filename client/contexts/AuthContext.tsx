@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, User } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -60,7 +61,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await authService.signout();
       setUser(null);
       router.push('/');
+      toast.success('Signed out', {
+        description: 'You have been successfully signed out.',
+      });
     } catch (error: any) {
+      toast.error('Sign out failed', {
+        description: error.response?.data?.message || 'Failed to sign out',
+      });
       throw new Error(error.response?.data?.message || 'Failed to sign out');
     }
   };

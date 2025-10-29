@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { Spinner } from '@/components/ui/spinner';
+import { Mail } from 'lucide-react';
+import { AuthCard } from '@/components/auth/AuthCard';
+import { SuccessMessage } from '@/components/auth/SuccessMessage';
+import { authService } from '@/services/authService';
+import { toast } from 'sonner';
 
 export default function VerifyEmailPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -18,6 +21,9 @@ export default function VerifyEmailPage() {
     if (!token) {
       setStatus('error');
       setMessage('Invalid verification link');
+      toast.error('Invalid link', {
+        description: 'The verification link is invalid or has expired.',
+      });
       return;
     }
 
@@ -26,13 +32,13 @@ export default function VerifyEmailPage() {
 
   const verifyEmail = async () => {
     try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/verify-email?token=${token}`,
-        { withCredentials: true }
-      );
+      const response = await authService.verifyEmail(token!);
 
       setStatus('success');
-      setMessage(response.data.message);
+      setMessage(response.message);
+      toast.success('Email verified!', {
+        description: 'Your email has been successfully verified.',
+      });
 
       // Redirect to dashboard after 3 seconds
       setTimeout(() => {
@@ -40,83 +46,70 @@ export default function VerifyEmailPage() {
       }, 3000);
     } catch (error: any) {
       setStatus('error');
-      setMessage(error.response?.data?.message || 'Email verification failed');
+      const errorMessage = error.response?.data?.message || 'Email verification failed';
+      setMessage(errorMessage);
+      toast.error('Verification failed', {
+        description: errorMessage,
+      });
     }
   };
 
+  if (status === 'loading') {
+    return (
+      <AuthCard
+        icon={Mail}
+        title="Verifying Email..."
+        description="Please wait while we verify your email address"
+      >
+        <div className="flex justify-center py-8">
+          <Spinner className="h-16 w-16" />
+        </div>
+      </AuthCard>
+    );
+  }
+
+  if (status === 'success') {
+    return (
+      <SuccessMessage
+        title="Email Verified!"
+        description={message}
+      >
+        <div className="text-center">
+          <p className="text-slate-300 mb-4">
+            Redirecting to dashboard in 3 seconds...
+          </p>
+          <Button
+            onClick={() => router.push('/dashboard')}
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
+            Go to Dashboard Now
+          </Button>
+        </div>
+      </SuccessMessage>
+    );
+  }
+
   return (
-    <Card className="w-full max-w-md bg-slate-900/50 border-slate-800">
-      <CardHeader className="text-center space-y-4">
-          {status === 'loading' && (
-            <>
-              <div className="flex justify-center">
-                <Loader2 className="h-16 w-16 text-blue-400 animate-spin" />
-              </div>
-              <CardTitle className="text-2xl text-white">Verifying Email...</CardTitle>
-              <CardDescription className="text-slate-400">
-                Please wait while we verify your email address
-              </CardDescription>
-            </>
-          )}
-
-          {status === 'success' && (
-            <>
-              <div className="flex justify-center">
-                <CheckCircle className="h-16 w-16 text-green-400" />
-              </div>
-              <CardTitle className="text-2xl text-white">Email Verified!</CardTitle>
-              <CardDescription className="text-slate-400">
-                {message}
-              </CardDescription>
-            </>
-          )}
-
-          {status === 'error' && (
-            <>
-              <div className="flex justify-center">
-                <XCircle className="h-16 w-16 text-red-400" />
-              </div>
-              <CardTitle className="text-2xl text-white">Verification Failed</CardTitle>
-              <CardDescription className="text-slate-400">
-                {message}
-              </CardDescription>
-            </>
-          )}
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {status === 'success' && (
-            <div className="text-center">
-              <p className="text-slate-300 mb-4">
-                Redirecting to dashboard in 3 seconds...
-              </p>
-              <Button
-                onClick={() => router.push('/dashboard')}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                Go to Dashboard Now
-              </Button>
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="space-y-2">
-              <Button
-                onClick={() => router.push('/signin')}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                Go to Sign In
-              </Button>
-              <Button
-                onClick={() => router.push('/')}
-                variant="outline"
-                className="w-full border-slate-700 hover:bg-slate-800"
-              >
-                Back to Home
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <AuthCard
+      icon={Mail}
+      title="Verification Failed"
+      description={message}
+    >
+      <div className="space-y-2">
+        <Button
+          onClick={() => router.push('/signin')}
+          className="w-full bg-blue-600 hover:bg-blue-700"
+        >
+          Go to Sign In
+        </Button>
+        <Button
+          onClick={() => router.push('/')}
+          variant="outline"
+          className="w-full border-slate-700 hover:bg-slate-800"
+        >
+          Back to Home
+        </Button>
+      </div>
+    </AuthCard>
   );
 }

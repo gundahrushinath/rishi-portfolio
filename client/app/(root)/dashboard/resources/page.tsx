@@ -12,11 +12,18 @@ import {
   BookOpen,
   LogOut,
   User,
-  Bell
+  Bell,
+  Video,
+  File,
+  Code,
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +46,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { Badge } from '@/components/ui/badge';
 
 const navigationItems = [
   {
@@ -60,6 +68,63 @@ const navigationItems = [
     title: 'Settings',
     icon: Settings,
     href: '/dashboard/settings',
+  },
+];
+
+const resources = [
+  {
+    id: 1,
+    title: 'Advanced React Patterns',
+    description: 'Learn advanced React patterns and best practices for scalable applications',
+    type: 'Video',
+    icon: Video,
+    category: 'Tutorial',
+    duration: '2h 30m',
+  },
+  {
+    id: 2,
+    title: 'TypeScript Handbook',
+    description: 'Complete guide to TypeScript for modern web development',
+    type: 'Document',
+    icon: File,
+    category: 'Documentation',
+    pages: '150 pages',
+  },
+  {
+    id: 3,
+    title: 'Next.js Best Practices',
+    description: 'Production-ready Next.js patterns and optimization techniques',
+    type: 'Code',
+    icon: Code,
+    category: 'Code Sample',
+    files: '25 files',
+  },
+  {
+    id: 4,
+    title: 'Full-Stack Development Course',
+    description: 'Complete MERN stack development course with real-world projects',
+    type: 'Video',
+    icon: Video,
+    category: 'Course',
+    duration: '15h',
+  },
+  {
+    id: 5,
+    title: 'UI/UX Design System',
+    description: 'Comprehensive design system with reusable components and guidelines',
+    type: 'Document',
+    icon: File,
+    category: 'Design',
+    pages: '80 pages',
+  },
+  {
+    id: 6,
+    title: 'API Development Templates',
+    description: 'REST API templates with authentication and database integration',
+    type: 'Code',
+    icon: Code,
+    category: 'Template',
+    files: '15 files',
   },
 ];
 
@@ -92,7 +157,7 @@ function DashboardSidebar() {
   );
 }
 
-export default function DashboardPage() {
+export default function ResourcesPage() {
   const { user, loading, isAuthenticated, signout } = useAuth();
   const router = useRouter();
 
@@ -103,7 +168,7 @@ export default function DashboardPage() {
   }, [loading, isAuthenticated, router]);
 
   if (loading) {
-    return <Loading fullScreen text="Loading dashboard..." />;
+    return <Loading fullScreen text="Loading resources..." />;
   }
 
   if (!isAuthenticated || !user) {
@@ -125,7 +190,7 @@ export default function DashboardPage() {
           {/* Topbar */}
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
             <div className="flex-1">
-              <h1 className="text-xl font-semibold">Welcome back, {user.name}!</h1>
+              <h1 className="text-xl font-semibold">Resources</h1>
             </div>
 
             <div className="flex items-center gap-4">
@@ -182,48 +247,81 @@ export default function DashboardPage() {
           <main className="flex-1 p-6">
             <div className="space-y-6">
               <div>
-                <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
+                <h2 className="text-3xl font-bold tracking-tight">Learning Resources</h2>
                 <p className="text-muted-foreground">
-                  Manage your portfolio and access exclusive resources
+                  Access exclusive tutorials, documentation, and code samples
                 </p>
               </div>
 
+              {/* Resource Stats */}
+              <div className="grid gap-4 md:grid-cols-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Total Resources</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">48</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Videos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">18</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Documents</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">20</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Code Samples</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">10</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Resources Grid */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <FileText className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Projects</p>
-                      <p className="text-2xl font-bold">12</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <BookOpen className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Resources</p>
-                      <p className="text-2xl font-bold">48</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <Bell className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Notifications</p>
-                      <p className="text-2xl font-bold">3</p>
-                    </div>
-                  </div>
-                </div>
+                {resources.map((resource) => (
+                  <Card key={resource.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="rounded-lg bg-primary/10 p-3">
+                          <resource.icon className="h-6 w-6 text-primary" />
+                        </div>
+                        <Badge variant="outline">{resource.category}</Badge>
+                      </div>
+                      <CardTitle className="mt-4 text-lg">{resource.title}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {resource.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>{resource.type}</span>
+                        <span>{resource.duration || resource.pages || resource.files}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="default" className="flex-1" size="sm">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           </main>

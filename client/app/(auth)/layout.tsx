@@ -1,11 +1,18 @@
+import { GRADIENTS, COMPONENT_STYLES } from '@/lib/design-system';
+import { AuthErrorBoundary } from '@/components/auth/AuthErrorBoundary';
+
 export default function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-      {children}
-    </div>
+    <AuthErrorBoundary>
+      <div className={`min-h-screen ${GRADIENTS.auth} flex items-center justify-center p-4 sm:p-6 md:p-8`}>
+        <div className="w-full max-w-md">
+          {children}
+        </div>
+      </div>
+    </AuthErrorBoundary>
   );
 }

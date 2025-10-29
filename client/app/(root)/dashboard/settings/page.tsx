@@ -12,11 +12,17 @@ import {
   BookOpen,
   LogOut,
   User,
-  Bell
+  Bell,
+  Lock,
+  Shield,
+  Palette
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,7 +98,7 @@ function DashboardSidebar() {
   );
 }
 
-export default function DashboardPage() {
+export default function SettingsPage() {
   const { user, loading, isAuthenticated, signout } = useAuth();
   const router = useRouter();
 
@@ -103,7 +109,7 @@ export default function DashboardPage() {
   }, [loading, isAuthenticated, router]);
 
   if (loading) {
-    return <Loading fullScreen text="Loading dashboard..." />;
+    return <Loading fullScreen text="Loading settings..." />;
   }
 
   if (!isAuthenticated || !user) {
@@ -125,7 +131,7 @@ export default function DashboardPage() {
           {/* Topbar */}
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
             <div className="flex-1">
-              <h1 className="text-xl font-semibold">Welcome back, {user.name}!</h1>
+              <h1 className="text-xl font-semibold">Settings</h1>
             </div>
 
             <div className="flex items-center gap-4">
@@ -180,51 +186,123 @@ export default function DashboardPage() {
 
           {/* Main Content */}
           <main className="flex-1 p-6">
-            <div className="space-y-6">
+            <div className="max-w-4xl space-y-6">
               <div>
-                <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
+                <h2 className="text-2xl font-bold">Account Settings</h2>
                 <p className="text-muted-foreground">
-                  Manage your portfolio and access exclusive resources
+                  Manage your account preferences and security settings
                 </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <FileText className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Projects</p>
-                      <p className="text-2xl font-bold">12</p>
-                    </div>
+              {/* Account Settings */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    <CardTitle>Account Information</CardTitle>
                   </div>
-                </div>
+                  <CardDescription>
+                    Update your account details and email preferences
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="settings-name">Full Name</Label>
+                    <Input id="settings-name" defaultValue={user.name} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="settings-email">Email Address</Label>
+                    <Input id="settings-email" type="email" defaultValue={user.email} />
+                  </div>
+                  <Button>Save Changes</Button>
+                </CardContent>
+              </Card>
 
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <BookOpen className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Resources</p>
-                      <p className="text-2xl font-bold">48</p>
-                    </div>
+              {/* Security Settings */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    <CardTitle>Security</CardTitle>
                   </div>
-                </div>
+                  <CardDescription>
+                    Manage your password and security preferences
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Current Password</Label>
+                    <Input id="current-password" type="password" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <Input id="new-password" type="password" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <Input id="confirm-password" type="password" />
+                  </div>
+                  <Button>Update Password</Button>
+                </CardContent>
+              </Card>
 
-                <div className="rounded-lg border bg-card p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-primary/10 p-3">
-                      <Bell className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Notifications</p>
-                      <p className="text-2xl font-bold">3</p>
-                    </div>
+              {/* Notification Settings */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    <CardTitle>Notifications</CardTitle>
                   </div>
-                </div>
-              </div>
+                  <CardDescription>
+                    Configure how you receive notifications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Email Notifications</p>
+                      <p className="text-sm text-muted-foreground">
+                        Receive updates about your projects via email
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm">Enable</Button>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Project Updates</p>
+                      <p className="text-sm text-muted-foreground">
+                        Get notified about new resources and features
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm">Enable</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Privacy Settings */}
+              <Card className="border-destructive/50">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-destructive" />
+                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Irreversible actions for your account
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Delete Account</p>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete your account and all associated data
+                      </p>
+                    </div>
+                    <Button variant="destructive" size="sm">Delete Account</Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </main>
         </div>
