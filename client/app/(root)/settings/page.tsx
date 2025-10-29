@@ -1,37 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loading } from '@/components/ui/loading';
 import { Spinner } from '@/components/ui/spinner';
-import { DASHBOARD_NAVIGATION } from '@/lib/constants';
 import { 
-  Home, 
-  LogOut,
-  User,
-  Bell,
   Lock,
   Shield,
   Palette,
-  AlertTriangle,
-  LayoutDashboard,
-  Settings
+  AlertTriangle
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -40,55 +22,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 
-function DashboardSidebar() {
-  const router = useRouter();
-
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {DASHBOARD_NAVIGATION.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton onClick={() => router.push(item.href)} tooltip={item.title}>
-                    <item.icon className="h-5 w-5 shrink-0" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="border-t p-3">
-        <SidebarTrigger className="w-full h-9" />
-      </SidebarFooter>
-    </Sidebar>
-  );
-}
-
 export default function SettingsPage() {
-  const { user, loading, isAuthenticated, signout, updateUser } = useAuth();
-  const router = useRouter();
+  const { user, updateUser } = useAuth();
 
   // Username state
   const [username, setUsername] = useState('');
@@ -106,13 +44,10 @@ export default function SettingsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/signin');
-    }
     if (user) {
       setUsername(user.name || '');
     }
-  }, [loading, isAuthenticated, router, user]);
+  }, [user]);
 
   const handleUpdateUsername = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,12 +123,6 @@ export default function SettingsPage() {
     try {
       await authService.deleteAccount(deletePassword);
       toast.success('Account deleted successfully');
-      
-      // Sign out and redirect
-      setTimeout(() => {
-        signout();
-        router.push('/');
-      }, 1500);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to delete account';
       toast.error(errorMessage);
@@ -202,84 +131,9 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
-    return <Loading fullScreen text="Loading settings..." />;
-  }
-
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-
-  const userInitials = user.name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase() || 'U';
-
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <DashboardSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Topbar */}
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
-            <div className="flex-1">
-              <h1 className="text-xl font-semibold">Settings</h1>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar>
-                      <AvatarImage src="" alt={user.name} />
-                      <AvatarFallback>{userInitials}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/')}>
-                    <Home className="mr-2 h-4 w-4" />
-                    Home
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signout()} variant="destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </header>
-
-          {/* Main Content */}
-          <main className="flex-1 p-6">
+    <div className="p-6">
+      <div className="space-y-6">
             <div className="max-w-4xl space-y-6">
               <div>
                 <h2 className="text-2xl font-bold">Account Settings</h2>
@@ -292,7 +146,7 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
+                    <Lock className="h-5 w-5" />
                     <CardTitle>Account Information</CardTitle>
                   </div>
                   <CardDescription>
@@ -316,7 +170,7 @@ export default function SettingsPage() {
                       <Input 
                         id="settings-email" 
                         type="email" 
-                        defaultValue={user.email}
+                        defaultValue={user?.email || ''}
                         disabled
                         className="bg-muted cursor-not-allowed opacity-60"
                       />
@@ -390,7 +244,7 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
+                    <Shield className="h-5 w-5" />
                     <CardTitle>Notifications</CardTitle>
                   </div>
                   <CardDescription>
@@ -450,9 +304,6 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </div>
-          </main>
-        </div>
-      </div>
 
       {/* Delete Account Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -511,6 +362,7 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </SidebarProvider>
+    </div>
+    </div>
   );
 }

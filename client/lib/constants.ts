@@ -1,40 +1,56 @@
-import { LayoutDashboard, FileText, BookOpen, Settings, StickyNote, Book, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, FileText, BookOpen, Settings, StickyNote, Book, CheckSquare, User } from 'lucide-react';
 
+// Main navigation for authenticated users
+// Follows MVC architecture - routes map to controllers/services
+// Prepared for future RBAC implementation
 export const DASHBOARD_NAVIGATION = [
   {
     title: 'Overview',
     icon: LayoutDashboard,
     href: '/dashboard',
+    // Future: roles: ['user', 'admin']
+  },
+  {
+    title: 'Profile',
+    icon: User,
+    href: '/profile',
+    // Future: roles: ['user', 'admin']
   },
   {
     title: 'Projects',
     icon: FileText,
-    href: '/dashboard/projects',
+    href: '/projects',
+    // Future: roles: ['user', 'admin']
   },
   {
     title: 'Resources',
     icon: BookOpen,
-    href: '/dashboard/resources',
+    href: '/resources',
+    // Future: roles: ['user', 'admin']
   },
   {
     title: 'Notes',
     icon: StickyNote,
-    href: '/dashboard/notes',
+    href: '/notes',
+    // Future: roles: ['user', 'admin']
   },
   {
     title: 'Diary',
     icon: Book,
-    href: '/dashboard/diary',
+    href: '/diary',
+    // Future: roles: ['user', 'admin']
   },
   {
     title: 'Todos',
     icon: CheckSquare,
-    href: '/dashboard/todos',
+    href: '/todos',
+    // Future: roles: ['user', 'admin']
   },
   {
     title: 'Settings',
     icon: Settings,
-    href: '/dashboard/settings',
+    href: '/settings',
+    // Future: roles: ['user', 'admin']
   },
 ] as const;
 

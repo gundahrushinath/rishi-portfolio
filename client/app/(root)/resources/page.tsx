@@ -1,15 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loading } from '@/components/ui/loading';
-import { DASHBOARD_NAVIGATION } from '@/lib/constants';
 import { 
-  Home, 
-  LogOut,
-  User,
-  Bell,
   Plus,
   Video,
   File,
@@ -19,13 +11,8 @@ import {
   Calendar,
   Tag,
   Trash2,
-  X,
-  LayoutDashboard,
-  Settings
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,64 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Resource, resourceService } from '@/lib/api';
 
-function DashboardSidebar() {
-  const router = useRouter();
-
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {DASHBOARD_NAVIGATION.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton onClick={() => router.push(item.href)} tooltip={item.title}>
-                    <item.icon className="h-5 w-5 shrink-0" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="border-t p-3">
-        <SidebarTrigger className="w-full h-9" />
-      </SidebarFooter>
-    </Sidebar>
-  );
-}
-
 export default function ResourcesPage() {
-  const { user, loading, isAuthenticated, signout } = useAuth();
-  const router = useRouter();
 
   // Resources state
   const [resources, setResources] = useState<Resource[]>([]);
@@ -125,18 +59,10 @@ export default function ResourcesPage() {
     isFeatured: false,
   });
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/signin');
-    }
-  }, [loading, isAuthenticated, router]);
-
   // Fetch resources on mount
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchResources();
-    }
-  }, [isAuthenticated, user]);
+    fetchResources();
+  }, []);
 
   const fetchResources = async () => {
     try {
@@ -242,116 +168,48 @@ export default function ResourcesPage() {
     }
   };
 
-  if (loading || isLoading) {
-    return <Loading fullScreen text="Loading resources..." />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <p>Loading resources...</p>
+      </div>
+    );
   }
-
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-
-  const userInitials = user.name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase() || 'U';
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <DashboardSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Topbar */}
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
-            <div className="flex-1">
-              <h1 className="text-xl font-semibold">Resources</h1>
-            </div>
+    <div className="p-6">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Learning Resources</h2>
+            <p className="text-muted-foreground">
+              Access curated learning materials and resources
+            </p>
+          </div>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Resource
+          </Button>
+        </div>
 
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar>
-                      <AvatarImage src="" alt={user.name} />
-                      <AvatarFallback>{userInitials}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/')}>
-                    <Home className="mr-2 h-4 w-4" />
-                    Home
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signout()} variant="destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </header>
-
-          {/* Main Content */}
-          <main className="flex-1 p-6">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold tracking-tight">Learning Resources</h2>
-                  <p className="text-muted-foreground">
-                    Access curated learning materials and resources
-                  </p>
-                </div>
-                <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Resource
-                </Button>
-              </div>
-
-              {/* Resource Stats */}
-              <div className="grid gap-4 md:grid-cols-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Total Resources</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{resources.length}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Videos/Courses</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{resources.filter(r => r.category === 'Video' || r.category === 'Course').length}</div>
-                  </CardContent>
-                </Card>
+        {/* Resource Stats */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Total Resources</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{resources.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Videos/Courses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{resources.filter(r => r.category === 'Video' || r.category === 'Course').length}</div>
+            </CardContent>
+          </Card>
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium">Articles/Docs</CardTitle>
@@ -429,38 +287,34 @@ export default function ResourcesPage() {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => handleDeleteClick(resource._id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                          onClick={() => handleDeleteClick(resource._id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
-          </main>
-        </div>
-      </div>
+          </div>
 
-      {/* New Resource Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => {
-        setDialogOpen(open);
-        if (!open) {
-          setEditingResource(null);
-          setFormData({ title: '', description: '', category: 'Tutorial', url: '', thumbnail: '', tags: '', isFeatured: false });
-        }
-      }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editingResource ? 'Edit Resource' : 'Create New Resource'}</DialogTitle>
-            <DialogDescription>
-              {editingResource ? 'Update your resource details below.' : 'Add a new learning resource to your collection.'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmit}>
+        {/* New Resource Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingResource(null);
+            setFormData({ title: '', description: '', category: 'Tutorial', url: '', thumbnail: '', tags: '', isFeatured: false });
+          }
+        }}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingResource ? 'Edit Resource' : 'Create New Resource'}</DialogTitle>
+              <DialogDescription>
+                {editingResource ? 'Update your resource details below.' : 'Add a new learning resource to your collection.'}
+              </DialogDescription>
+            </DialogHeader>
+                    <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Resource Title *</Label>
@@ -609,6 +463,6 @@ export default function ResourcesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </SidebarProvider>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { Z_INDEX, ICON_SIZES } from '@/lib/design-system';
+import { ModeToggle } from '@/components/portfolio/mode-toggle';
 
 export function DashboardHeader() {
   const { user, signout } = useAuth();
@@ -35,6 +36,8 @@ export function DashboardHeader() {
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4">
+          <ModeToggle />
+          
           <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
             <Bell className={ICON_SIZES.md} />
           </Button>
