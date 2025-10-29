@@ -1,23 +1,44 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { useAuth } from '@/contexts/AuthContext';
 import { LogIn } from 'lucide-react';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { FormError } from '@/components/auth/FormError';
 import { FormInput } from '@/components/auth/FormInput';
 import { AuthFooter } from '@/components/auth/AuthFooter';
-import { useAuthForm } from '@/hooks/use-auth-form';
+import { toast } from 'sonner';
 
 export default function SignInPage() {
-  const {
-    formData,
-    errors,
-    loading,
-    updateField,
-    handleSubmit,
-  } = useAuthForm('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { signin } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await signin(email, password);
+      toast.success('Welcome back!', {
+        description: 'You have successfully signed in.',
+      });
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to sign in';
+      setError(errorMessage);
+      toast.error('Sign in failed', {
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthCard
@@ -26,15 +47,15 @@ export default function SignInPage() {
       description="Sign in to access your dashboard"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {errors.general && <FormError message={errors.general} />}
+        <FormError message={error} />
         
         <FormInput
           id="email"
           label="Email"
           type="email"
           placeholder="Enter Email Address"
-          value={formData.email || ''}
-          onChange={(value) => updateField('email', value)}
+          value={email}
+          onChange={setEmail}
           required
         />
 
@@ -43,8 +64,8 @@ export default function SignInPage() {
           label="Password"
           type="password"
           placeholder="Enter Password"
-          value={formData.password || ''}
-          onChange={(value) => updateField('password', value)}
+          value={password}
+          onChange={setPassword}
           required
           labelExtra={
             <Link href="/forgot-password" className="text-xs text-blue-400 hover:text-blue-300">

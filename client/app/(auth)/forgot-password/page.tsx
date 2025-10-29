@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -8,17 +9,36 @@ import { AuthCard } from '@/components/auth/AuthCard';
 import { FormError } from '@/components/auth/FormError';
 import { FormInput } from '@/components/auth/FormInput';
 import { SuccessMessage } from '@/components/auth/SuccessMessage';
-import { useAuthForm } from '@/hooks/use-auth-form';
+import { authService } from '@/services/authService';
+import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
-  const {
-    formData,
-    errors,
-    loading,
-    success,
-    updateField,
-    handleSubmit,
-  } = useAuthForm('forgot-password');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await authService.forgotPassword(email);
+      setSuccess(true);
+      toast.success('Email sent!', {
+        description: 'Check your inbox for password reset instructions.',
+      });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to send reset email';
+      setError(errorMessage);
+      toast.error('Request failed', {
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (success) {
     return (
@@ -36,7 +56,7 @@ export default function ForgotPasswordPage() {
             Didn't receive the email? Check your spam folder.
           </p>
           <Button
-            onClick={() => window.location.reload()}
+            onClick={() => setSuccess(false)}
             variant="outline"
             className="border-slate-700 hover:bg-slate-800"
           >
@@ -59,15 +79,15 @@ export default function ForgotPasswordPage() {
       description="Enter your email and we'll send you a reset link"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {errors.general && <FormError message={errors.general} />}
+        <FormError message={error} />
         
         <FormInput
           id="email"
           label="Email Address"
           type="email"
           placeholder="Enter Email Address"
-          value={formData.email || ''}
-          onChange={(value) => updateField('email', value)}
+          value={email}
+          onChange={setEmail}
           required
           icon={Mail}
         />

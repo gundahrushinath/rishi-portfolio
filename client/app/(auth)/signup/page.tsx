@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,24 +11,66 @@ import { FormError } from '@/components/auth/FormError';
 import { FormInput } from '@/components/auth/FormInput';
 import { AuthFooter } from '@/components/auth/AuthFooter';
 import { SuccessMessage } from '@/components/auth/SuccessMessage';
-import { useAuthForm } from '@/hooks/use-auth-form';
+import { validatePassword, validatePasswordMatch } from '@/lib/validation';
+import { authService } from '@/services/authService';
+import { toast } from 'sonner';
 
 export default function SignUpPage() {
-  const {
-    formData,
-    errors,
-    loading,
-    success,
-    updateField,
-    handleSubmit,
-  } = useAuthForm('signup');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      toast.error('Validation error', {
+        description: passwordError,
+      });
+      return;
+    }
+
+    const matchError = validatePasswordMatch(password, confirmPassword);
+    if (matchError) {
+      setError(matchError);
+      toast.error('Validation error', {
+        description: matchError,
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authService.signup(email, password, name);
+      setSuccess(true);
+      toast.success('Account created!', {
+        description: 'Please check your email to verify your account.',
+      });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to sign up';
+      setError(errorMessage);
+      toast.error('Sign up failed', {
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (success) {
     return (
       <SuccessMessage
         title="Check Your Email!"
-        description={`We've sent a verification link to ${formData.email}`}
+        description={`We've sent a verification link to ${email}`}
       >
         <div className="bg-blue-500/10 border border-blue-500 text-blue-400 px-4 py-3 rounded-md text-sm">
           <p className="font-semibold mb-2 flex items-center gap-2">
@@ -66,15 +109,15 @@ export default function SignUpPage() {
       description="Join us and get access to exclusive content"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {errors.general && <FormError message={errors.general} />}
+        <FormError message={error} />
         
         <FormInput
           id="name"
           label="Name"
           type="text"
           placeholder="Enter Name"
-          value={formData.name || ''}
-          onChange={(value) => updateField('name', value)}
+          value={name}
+          onChange={setName}
           required
         />
 
@@ -83,8 +126,8 @@ export default function SignUpPage() {
           label="Email"
           type="email"
           placeholder="Enter Email Address"
-          value={formData.email || ''}
-          onChange={(value) => updateField('email', value)}
+          value={email}
+          onChange={setEmail}
           required
         />
 
@@ -93,8 +136,8 @@ export default function SignUpPage() {
           label="Password"
           type="password"
           placeholder="Enter Password"
-          value={formData.password || ''}
-          onChange={(value) => updateField('password', value)}
+          value={password}
+          onChange={setPassword}
           required
         />
 
@@ -103,8 +146,8 @@ export default function SignUpPage() {
           label="Confirm Password"
           type="password"
           placeholder="Confirm Password"
-          value={formData.confirmPassword || ''}
-          onChange={(value) => updateField('confirmPassword', value)}
+          value={confirmPassword}
+          onChange={setConfirmPassword}
           required
         />
 

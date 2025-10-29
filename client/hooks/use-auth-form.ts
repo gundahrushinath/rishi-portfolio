@@ -27,7 +27,6 @@ export function useAuthForm(type: 'signin' | 'signup' | 'forgot-password' | 'res
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
 
   const updateField = (field: keyof FormState, value: string) => {
@@ -77,7 +76,7 @@ export function useAuthForm(type: 'signin' | 'signup' | 'forgot-password' | 'res
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: FormEvent, onSuccess?: () => void, token?: string) => {
+  const handleSubmit = async (e: FormEvent, onSuccess?: () => void) => {
     e.preventDefault();
     setErrors({});
 
@@ -100,28 +99,20 @@ export function useAuthForm(type: 'signin' | 'signup' | 'forgot-password' | 'res
             formData.email,
             formData.password
           );
-          setSuccess(true);
           toast.success('Account created!', {
             description: 'Please check your email to verify your account.',
           });
+          router.push('/signin');
           break;
         case 'forgot-password':
           response = await authService.forgotPassword(formData.email);
-          setSuccess(true);
           toast.success('Email sent!', {
             description: 'Check your inbox for password reset instructions.',
           });
           if (onSuccess) onSuccess();
           break;
         case 'reset-password':
-          if (token) {
-            response = await authService.resetPassword(token, formData.password);
-            setSuccess(true);
-            toast.success('Password reset successful!', {
-              description: 'You can now sign in with your new password.',
-            });
-            if (onSuccess) onSuccess();
-          }
+          // Handled in component with token
           break;
       }
     } catch (error: any) {
@@ -139,7 +130,6 @@ export function useAuthForm(type: 'signin' | 'signup' | 'forgot-password' | 'res
     formData,
     errors,
     loading,
-    success,
     updateField,
     handleSubmit,
     setLoading,

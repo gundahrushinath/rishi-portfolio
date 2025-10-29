@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,39 +10,73 @@ import { AuthCard } from '@/components/auth/AuthCard';
 import { FormError } from '@/components/auth/FormError';
 import { FormInput } from '@/components/auth/FormInput';
 import { SuccessMessage } from '@/components/auth/SuccessMessage';
-import { useAuthForm } from '@/hooks/use-auth-form';
+import { validatePassword, validatePasswordMatch } from '@/lib/validation';
+import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 
 export default function ResetPasswordPage() {
-  const {
-    formData,
-    errors,
-    loading,
-    success,
-    updateField,
-    handleSubmit,
-    setErrors,
-  } = useAuthForm('reset-password');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
   useEffect(() => {
     if (!token) {
-      setErrors({ general: 'Invalid reset link' });
+      setError('Invalid reset link');
       toast.error('Invalid link', {
         description: 'The password reset link is invalid or has expired.',
       });
     }
-  }, [token, setErrors]);
+  }, [token]);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    await handleSubmit(e, () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      toast.error('Validation error', {
+        description: passwordError,
+      });
+      return;
+    }
+
+    const matchError = validatePasswordMatch(password, confirmPassword);
+    if (matchError) {
+      setError(matchError);
+      toast.error('Validation error', {
+        description: matchError,
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authService.resetPassword(token!, password);
+      setSuccess(true);
+      toast.success('Password reset successful!', {
+        description: 'You can now sign in with your new password.',
+      });
+
       // Redirect to signin after 3 seconds
       setTimeout(() => {
         router.push('/signin');
       }, 3000);
-    }, token || undefined);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to reset password';
+      setError(errorMessage);
+      toast.error('Reset failed', {
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -76,16 +110,16 @@ export default function ResetPasswordPage() {
       title="Reset Password"
       description="Enter your new password below"
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        {errors.general && <FormError message={errors.general} />}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <FormError message={error} />
         
         <FormInput
           id="password"
           label="New Password"
           type="password"
           placeholder="Enter new password"
-          value={formData.password || ''}
-          onChange={(value) => updateField('password', value)}
+          value={password}
+          onChange={setPassword}
           required
           disabled={!token}
           helperText="Minimum 6 characters"
@@ -96,8 +130,8 @@ export default function ResetPasswordPage() {
           label="Confirm New Password"
           type="password"
           placeholder="Confirm new password"
-          value={formData.confirmPassword || ''}
-          onChange={(value) => updateField('confirmPassword', value)}
+          value={confirmPassword}
+          onChange={setConfirmPassword}
           required
           disabled={!token}
         />
