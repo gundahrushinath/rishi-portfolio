@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, BookOpen, Settings, StickyNote, Book, CheckSquare, User } from 'lucide-react';
+import { LayoutDashboard, FileText, BookOpen, Settings, StickyNote, Book, CheckSquare } from 'lucide-react';
 
 // Main navigation for authenticated users
 // Follows MVC architecture - routes map to controllers/services
@@ -8,12 +8,6 @@ export const DASHBOARD_NAVIGATION = [
     title: 'Overview',
     icon: LayoutDashboard,
     href: '/dashboard',
-    // Future: roles: ['user', 'admin']
-  },
-  {
-    title: 'Profile',
-    icon: User,
-    href: '/profile',
     // Future: roles: ['user', 'admin']
   },
   {

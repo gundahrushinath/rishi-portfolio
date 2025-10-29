@@ -8,13 +8,37 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/lib/toast';
 import { Plus, Pin, Archive, Copy, Trash2, Edit2, X, Search } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { NOTE_COLORS, getNoteColor } from '@/lib/theme-colors';
 
 const NOTE_CATEGORIES = ['Personal', 'Work', 'Study', 'Ideas', 'Code Snippet', 'Meeting', 'Other'] as const;
-const NOTE_COLORS = ['#ffffff', '#ffebee', '#e3f2fd', '#e8f5e9', '#fff9c4', '#fce4ec', '#f3e5f5', '#e0f2f1'];
+
+// Helper function for relative time
+const getRelativeTime = (date: string) => {
+  const now = new Date();
+  const noteDate = new Date(date);
+  const diffInSeconds = Math.floor((now.getTime() - noteDate.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)}w ago`;
+  return noteDate.toLocaleDateString();
+};
 
 export default function NotesPage() {
+  const { theme } = useTheme();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -23,6 +47,7 @@ export default function NotesPage() {
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterPinned, setFilterPinned] = useState<boolean | undefined>(undefined);
   const [filterArchived, setFilterArchived] = useState<boolean>(false);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<NoteInput>({
     title: '',
@@ -40,13 +65,33 @@ export default function NotesPage() {
     fetchNotes();
   }, [filterCategory, filterPinned, filterArchived, searchQuery]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + N: New note
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setShowForm(true);
+      }
+      // Escape: Close form
+      if (e.key === 'Escape' && showForm) {
+        e.preventDefault();
+        resetForm();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showForm]);
+
   const fetchNotes = async () => {
     try {
       setLoading(true);
       const filters: any = {};
       if (filterCategory) filters.category = filterCategory;
       if (filterPinned !== undefined) filters.isPinned = filterPinned;
-      if (filterArchived) filters.isArchived = filterArchived;
+      // Always filter by archived status: false = show active notes, true = show archived notes
+      filters.isArchived = filterArchived;
       if (searchQuery) filters.search = searchQuery;
 
       const response = await noteService.getAll(filters);
@@ -63,11 +108,19 @@ export default function NotesPage() {
     try {
       if (editingNote) {
         const response = await noteService.update(editingNote._id, formData);
-        setNotes(notes.map(n => n._id === editingNote._id ? response.note : n));
+        // If the note's archived state matches current filter, show it, otherwise hide it
+        if (response.note.isArchived === filterArchived) {
+          setNotes(notes.map(n => n._id === editingNote._id ? response.note : n));
+        } else {
+          setNotes(notes.filter(n => n._id !== editingNote._id));
+        }
         toast.success('Note updated successfully!');
       } else {
         const response = await noteService.create(formData);
-        setNotes([response.note, ...notes]);
+        // Only add to view if it matches current filter
+        if (response.note.isArchived === filterArchived) {
+          setNotes([response.note, ...notes]);
+        }
         toast.success('Note created successfully!');
       }
       resetForm();
@@ -77,11 +130,11 @@ export default function NotesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this note?')) return;
     try {
       await noteService.delete(id);
       setNotes(notes.filter(n => n._id !== id));
       toast.success('Note deleted successfully!');
+      setNoteToDelete(null);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete note');
     }
@@ -110,8 +163,9 @@ export default function NotesPage() {
   const toggleArchive = async (note: Note) => {
     try {
       const response = await noteService.update(note._id, { isArchived: !note.isArchived });
-      setNotes(notes.map(n => n._id === note._id ? response.note : n));
-      toast.success(note.isArchived ? 'Note unarchived' : 'Note archived');
+      // Remove the note from current view since it's now in a different state
+      setNotes(notes.filter(n => n._id !== note._id));
+      toast.success(note.isArchived ? 'Note unarchived and moved to active notes' : 'Note archived successfully');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update note');
     }
@@ -172,8 +226,44 @@ export default function NotesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-6">
-        <p>Loading notes...</p>
+      <div className="p-6">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-20" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-16 w-full mb-4" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Skeleton className="h-3 w-24" />
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -187,14 +277,31 @@ export default function NotesPage() {
           <p className="text-muted-foreground">Organize your thoughts and ideas</p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-          {showForm ? 'Cancel' : 'New Note'}
+          <Plus className="mr-2 h-4 w-4" />
+          New Note
         </Button>
       </div>
 
+      {/* Stats */}
+      <div className="flex gap-4">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-medium">{notes.length}</span>
+          <span className="text-muted-foreground">
+            {filterArchived ? 'archived' : 'active'} {notes.length === 1 ? 'note' : 'notes'}
+          </span>
+        </div>
+        {notes.filter(n => n.isPinned).length > 0 && !filterArchived && (
+          <div className="flex items-center gap-2 text-sm">
+            <Pin className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-medium">{notes.filter(n => n.isPinned).length}</span>
+            <span className="text-muted-foreground">pinned</span>
+          </div>
+        )}
+      </div>
+
       {/* Search and Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="relative">
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search notes..."
@@ -203,30 +310,40 @@ export default function NotesPage() {
             className="pl-9"
           />
         </div>
-        <select
-          className="px-3 py-2 border rounded-md"
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
+        
+        <Select value={filterCategory || "all"} onValueChange={(value) => setFilterCategory(value === "all" ? "" : value)}>
+          <SelectTrigger className="w-full md:w-[200px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {NOTE_CATEGORIES.map(cat => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select 
+          value={filterPinned === undefined ? 'all' : String(filterPinned)} 
+          onValueChange={(value) => setFilterPinned(value === 'all' ? undefined : value === 'true')}
         >
-          <option value="">All Categories</option>
-          {NOTE_CATEGORIES.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-        <select
-          className="px-3 py-2 border rounded-md"
-          value={filterPinned === undefined ? '' : String(filterPinned)}
-          onChange={(e) => setFilterPinned(e.target.value === '' ? undefined : e.target.value === 'true')}
-        >
-          <option value="">All Notes</option>
-          <option value="true">Pinned Only</option>
-          <option value="false">Unpinned Only</option>
-        </select>
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue placeholder="All Notes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Notes</SelectItem>
+            <SelectItem value="true">Pinned Only</SelectItem>
+            <SelectItem value="false">Unpinned Only</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Button
           variant={filterArchived ? 'default' : 'outline'}
           onClick={() => setFilterArchived(!filterArchived)}
+          className="w-full md:w-auto"
         >
-          {filterArchived ? 'Show Active' : 'Show Archived'}
+          <Archive className="mr-2 h-4 w-4" />
+          {filterArchived ? 'Show Active Notes' : 'Show Archived Notes'}
         </Button>
       </div>
 
@@ -234,107 +351,165 @@ export default function NotesPage() {
       {showForm && (
         <Card className="mb-6">
           <form onSubmit={handleSubmit}>
-            <CardHeader>
-              <CardTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</CardTitle>
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</CardTitle>
+                    <span className="text-sm text-muted-foreground">(* Required fields)</span>
+                  </div>
+                  <CardDescription>
+                    {editingNote ? 'Update your note details below' : 'Fill in the details to create a new note'}
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={resetForm}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm">
+                    {editingNote ? 'Update Note' : 'Create Note'}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title *</Label>
+            <ScrollArea className="max-h-[600px]">
+              <CardContent className="space-y-6 pr-4">
+              {/* Title Field */}
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-sm font-semibold">
+                  Title <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
+                  placeholder="Enter a descriptive title for your note"
+                  className="text-base"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="content">Content</Label>
-                <textarea
+              {/* Content Field */}
+              <div className="space-y-2">
+                <Label htmlFor="content" className="text-sm font-semibold">
+                  Content
+                </Label>
+                <Textarea
                   id="content"
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  className="w-full min-h-[200px] px-3 py-2 border rounded-md"
-                  placeholder="Write your note here..."
+                  className="min-h-[200px] resize-none text-base"
+                  placeholder="Write your note content here..."
                 />
+                <p className="text-xs text-muted-foreground">
+                  Share your thoughts, ideas, or important information
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <select
-                    id="category"
-                    className="w-full px-3 py-2 border rounded-md"
+              <Separator className="my-6" />
+
+              {/* Category and Color Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="category" className="text-sm font-semibold">
+                    Category
+                  </Label>
+                  <Select
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                    onValueChange={(value) => setFormData({ ...formData, category: value as any })}
                   >
-                    {NOTE_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="category" className="w-full">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NOTE_CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div>
-                  <Label>Color</Label>
-                  <div className="flex gap-2 mt-2">
-                    {NOTE_COLORS.map(color => (
-                      <button
-                        key={color}
-                        type="button"
-                        className={`w-8 h-8 rounded-full border-2 ${formData.color === color ? 'border-black' : 'border-gray-300'}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setFormData({ ...formData, color })}
-                      />
-                    ))}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Note Color</Label>
+                  <div className="flex gap-2 items-center pt-1">
+                    {NOTE_COLORS.map(colorObj => {
+                      const colorValue = theme === 'dark' ? colorObj.dark : colorObj.light;
+                      const isSelected = formData.color === colorObj.light || formData.color === colorObj.dark;
+                      return (
+                        <button
+                          key={colorObj.label}
+                          type="button"
+                          title={colorObj.label}
+                          className={`w-9 h-9 rounded-full border-2 transition-all hover:scale-110 ${
+                            isSelected 
+                              ? 'border-primary ring-2 ring-primary/30 scale-110' 
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          style={{ backgroundColor: colorValue }}
+                          onClick={() => setFormData({ ...formData, color: colorValue })}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="tags">Tags</Label>
-                <div className="flex gap-2 mb-2">
+              {/* Tags Field */}
+              <div className="space-y-2">
+                <Label htmlFor="tags" className="text-sm font-semibold">
+                  Tags
+                </Label>
+                <div className="flex gap-2">
                   <Input
                     id="tags"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                    placeholder="Add tag and press Enter"
+                    placeholder="Type a tag and press Enter"
+                    className="flex-1"
                   />
-                  <Button type="button" onClick={addTag}>Add</Button>
+                  <Button type="button" onClick={addTag} variant="secondary">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags?.map(tag => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                      <X className="ml-1 h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />
-                    </Badge>
-                  ))}
-                </div>
+                {formData.tags && formData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {formData.tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-sm px-3 py-1">
+                        {tag}
+                        <X 
+                          className="ml-2 h-3 w-3 cursor-pointer hover:text-destructive transition-colors" 
+                          onClick={() => removeTag(tag)} 
+                        />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+              <Separator />
+
+              <div className="flex gap-6">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="isPinned"
                     checked={formData.isPinned}
-                    onChange={(e) => setFormData({ ...formData, isPinned: e.target.checked })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isPinned: checked as boolean })}
                   />
-                  <span>Pin this note</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+                  <Label htmlFor="isPinned" className="cursor-pointer">Pin this note</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="isArchived"
                     checked={formData.isArchived}
-                    onChange={(e) => setFormData({ ...formData, isArchived: e.target.checked })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isArchived: checked as boolean })}
                   />
-                  <span>Archive</span>
-                </label>
+                  <Label htmlFor="isArchived" className="cursor-pointer">Archive</Label>
+                </div>
               </div>
             </CardContent>
-            <CardFooter className="flex gap-2">
-              <Button type="submit">{editingNote ? 'Update Note' : 'Create Note'}</Button>
-              <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
-            </CardFooter>
+            </ScrollArea>
           </form>
         </Card>
       )}
@@ -343,20 +518,32 @@ export default function NotesPage() {
       {notes.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">No notes found. Create your first note!</p>
+            <Archive className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+            <p className="text-muted-foreground text-lg mb-2">
+              {filterArchived ? 'No archived notes' : 'No active notes found'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {filterArchived 
+                ? 'Archive notes to move them here for later reference' 
+                : 'Create your first note to get started!'}
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedNotes.map(note => (
-            <Card
-              key={note._id}
-              style={{ backgroundColor: note.color }}
-              className="relative group"
-            >
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-300">
+          {sortedNotes.map(note => {
+            const noteColor = getNoteColor(note.color, theme === 'dark');
+            return (
+              <Card
+                key={note._id}
+                style={{ backgroundColor: noteColor }}
+                className={`relative group border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
+                  note.isPinned ? 'ring-2 ring-primary/20 border-primary/30' : ''
+                }`}
+              >
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
                     <CardTitle className="flex items-center gap-2">
                       {note.isPinned && <Pin className="h-4 w-4" />}
                       {note.title}
@@ -366,62 +553,141 @@ export default function NotesPage() {
                     </CardDescription>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => togglePin(note)}
-                      title={note.isPinned ? 'Unpin' : 'Pin'}
-                    >
-                      <Pin className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleEdit(note)}
-                      title="Edit"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDuplicate(note._id)}
-                      title="Duplicate"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => toggleArchive(note)}
-                      title={note.isArchived ? 'Unarchive' : 'Archive'}
-                    >
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDelete(note._id)}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => togglePin(note)}
+                          >
+                            <Pin className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{note.isPinned ? 'Unpin' : 'Pin'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEdit(note)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDuplicate(note._id)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Duplicate</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => toggleArchive(note)}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{note.isArchived ? 'Unarchive' : 'Archive'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <AlertDialog open={noteToDelete === note._id} onOpenChange={(open) => !open && setNoteToDelete(null)}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setNoteToDelete(note._id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the note "{note.title}".
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(note._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TooltipProvider>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm line-clamp-3 mb-4">{note.content}</p>
-                <div className="flex flex-wrap gap-1">
+                <ScrollArea className="h-24 w-full rounded-md">
+                  {note.content ? (
+                    <p className="text-sm pr-4">{note.content}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic pr-4">No content</p>
+                  )}
+                </ScrollArea>
+                <div className="flex flex-wrap gap-1 mt-4">
                   {note.tags.map(tag => (
                     <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                   ))}
                 </div>
               </CardContent>
-              <CardFooter className="text-xs text-muted-foreground">
-                {new Date(note.createdAt).toLocaleDateString()}
+              <CardFooter className="text-xs text-muted-foreground flex justify-between items-center">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help">{getRelativeTime(note.createdAt)}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-xs space-y-1">
+                      <p>Created: {new Date(note.createdAt).toLocaleString()}</p>
+                      {note.updatedAt && note.updatedAt !== note.createdAt && (
+                        <p>Updated: {new Date(note.updatedAt).toLocaleString()}</p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+                {note.isPinned && (
+                  <Badge variant="outline" className="text-xs">
+                    <Pin className="h-3 w-3 mr-1" />
+                    Pinned
+                  </Badge>
+                )}
               </CardFooter>
             </Card>
-          ))}
+          );
+          })}
         </div>
       )}
     </div>

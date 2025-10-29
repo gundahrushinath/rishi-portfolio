@@ -8,25 +8,34 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/lib/toast';
 import { Plus, Trash2, Edit2, X, CheckSquare, Square, BarChart3, Calendar } from 'lucide-react';
+import { PRIORITY_BADGE_COLORS, STATUS_BADGE_COLORS, CATEGORY_BADGE_COLORS } from '@/lib/theme-colors';
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'] as const;
 const STATUS_OPTIONS = ['Todo', 'In Progress', 'Completed', 'Cancelled'] as const;
 const CATEGORY_OPTIONS = ['Work', 'Personal', 'Study', 'Health', 'Shopping', 'Other'] as const;
 
-const PRIORITY_COLORS: Record<string, string> = {
-  'Low': 'bg-blue-100 text-blue-800',
-  'Medium': 'bg-yellow-100 text-yellow-800',
-  'High': 'bg-orange-100 text-orange-800',
-  'Urgent': 'bg-red-100 text-red-800',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  'Todo': 'bg-gray-100 text-gray-800',
-  'In Progress': 'bg-blue-100 text-blue-800',
-  'Completed': 'bg-green-100 text-green-800',
-  'Cancelled': 'bg-red-100 text-red-800',
+// Helper function for relative time
+const getRelativeTime = (date: string) => {
+  const now = new Date();
+  const todoDate = new Date(date);
+  const diffInSeconds = Math.floor((now.getTime() - todoDate.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)}w ago`;
+  return todoDate.toLocaleDateString();
 };
 
 export default function TodoPage() {
@@ -39,6 +48,7 @@ export default function TodoPage() {
   const [filterPriority, setFilterPriority] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [todoToDelete, setTodoToDelete] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<TodoInput>({
     title: '',
@@ -61,6 +71,22 @@ export default function TodoPage() {
     fetchTodos();
     fetchStatistics();
   }, [filterPriority, filterStatus, filterCategory]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setShowForm(true);
+      }
+      if (e.key === 'Escape' && showForm) {
+        e.preventDefault();
+        resetForm();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showForm]);
 
   const fetchTodos = async () => {
     try {
@@ -108,11 +134,11 @@ export default function TodoPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this todo?')) return;
     try {
       await todoService.delete(id);
       setTodos(todos.filter(t => t._id !== id));
       toast.success('Todo deleted successfully!');
+      setTodoToDelete(null);
       fetchStatistics();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete todo');
@@ -274,45 +300,46 @@ export default function TodoPage() {
       )}
 
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <Label>Priority</Label>
-          <select
-            className="w-full px-3 py-2 border rounded-md mt-1"
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value)}
-          >
-            <option value="">All Priorities</option>
+      <div className="flex flex-col md:flex-row gap-4">
+        <Select value={filterPriority || "all"} onValueChange={(value) => setFilterPriority(value === "all" ? "" : value)}>
+          <SelectTrigger className="w-full md:w-[200px]">
+            <SelectValue placeholder="All Priorities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
             {PRIORITY_OPTIONS.map(priority => (
-              <option key={priority} value={priority}>{priority}</option>
+              <SelectItem key={priority} value={priority}>{priority}</SelectItem>
             ))}
-          </select>
-        </div>
-        <div>
-          <Label>Status</Label>
-          <select
-            className="w-full px-3 py-2 border rounded-md mt-1"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="">All Statuses</option>
+          </SelectContent>
+        </Select>
+
+        <Select value={filterStatus || "all"} onValueChange={(value) => setFilterStatus(value === "all" ? "" : value)}>
+          <SelectTrigger className="w-full md:w-[200px]">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
             {STATUS_OPTIONS.map(status => (
-              <option key={status} value={status}>{status}</option>
+              <SelectItem key={status} value={status}>{status}</SelectItem>
             ))}
-          </select>
-        </div>
-        <div>
-          <Label>Category</Label>
-          <select
-            className="w-full px-3 py-2 border rounded-md mt-1"
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-          >
-            <option value="">All Categories</option>
+          </SelectContent>
+        </Select>
+
+        <Select value={filterCategory || "all"} onValueChange={(value) => setFilterCategory(value === "all" ? "" : value)}>
+          <SelectTrigger className="w-full md:w-[200px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
             {CATEGORY_OPTIONS.map(category => (
-              <option key={category} value={category}>{category}</option>
+              <SelectItem key={category} value={category}>{category}</SelectItem>
             ))}
-          </select>
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center gap-2 text-sm ml-auto">
+          <span className="font-medium">{todos.length}</span>
+          <span className="text-muted-foreground">{todos.length === 1 ? 'task' : 'tasks'}</span>
         </div>
       </div>
 
@@ -323,7 +350,8 @@ export default function TodoPage() {
             <CardHeader>
               <CardTitle>{editingTodo ? 'Edit Todo' : 'Create New Todo'}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <ScrollArea className="max-h-[600px]">
+              <CardContent className="space-y-4 pr-4">
               <div>
                 <Label htmlFor="title">Title *</Label>
                 <Input
@@ -491,6 +519,7 @@ export default function TodoPage() {
                 />
               </div>
             </CardContent>
+            </ScrollArea>
             <CardFooter className="flex gap-2">
               <Button type="submit">{editingTodo ? 'Update Todo' : 'Create Todo'}</Button>
               <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
@@ -519,13 +548,13 @@ export default function TodoPage() {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge className={PRIORITY_COLORS[todo.priority]}>
+                        <Badge className={PRIORITY_BADGE_COLORS[todo.priority]}>
                           {todo.priority}
                         </Badge>
-                        <Badge className={STATUS_COLORS[todo.status]}>
+                        <Badge className={STATUS_BADGE_COLORS[todo.status]}>
                           {todo.status}
                         </Badge>
-                        <Badge variant="outline">{todo.category}</Badge>
+                        <Badge className={CATEGORY_BADGE_COLORS[todo.category] || CATEGORY_BADGE_COLORS['Other']}>{todo.category}</Badge>
                         {overdueFlag && <Badge variant="destructive">Overdue</Badge>}
                       </div>
                       <CardTitle className="flex items-center gap-2">
@@ -542,31 +571,78 @@ export default function TodoPage() {
                       )}
                     </div>
                     <div className="flex gap-1">
-                      <select
-                        className="text-sm px-2 py-1 border rounded"
-                        value={todo.status}
-                        onChange={(e) => handleStatusChange(todo._id, e.target.value)}
-                      >
-                        {STATUS_OPTIONS.map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleEdit(todo)}
-                        title="Edit"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDelete(todo._id)}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="min-w-[120px]">
+                              <Select
+                                value={todo.status}
+                                onValueChange={(value) => handleStatusChange(todo._id, value)}
+                              >
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STATUS_OPTIONS.map(status => (
+                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Change status</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleEdit(todo)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Edit</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <AlertDialog open={todoToDelete === todo._id} onOpenChange={(open) => !open && setTodoToDelete(null)}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => setTodoToDelete(todo._id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Task?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete "{todo.title}". This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(todo._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TooltipProvider>
                     </div>
                   </div>
                 </CardHeader>

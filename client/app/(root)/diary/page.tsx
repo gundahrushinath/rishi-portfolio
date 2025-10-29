@@ -8,28 +8,56 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/lib/toast';
 import { Plus, Trash2, Edit2, X, CheckSquare, Square, TrendingUp } from 'lucide-react';
+import { MOOD_COLORS } from '@/lib/theme-colors';
 
 const MOOD_OPTIONS = ['Happy', 'Sad', 'Neutral', 'Excited', 'Anxious', 'Grateful', 'Tired', 'Motivated'] as const;
 const MOOD_EMOJIS: Record<string, string> = {
   'Happy': '😊',
-  'Sad': '😢',
+  'Sad': '�',
   'Neutral': '😐',
   'Excited': '🤩',
   'Anxious': '😰',
-  'Grateful': '🙏',
+  'Grateful': '�',
   'Tired': '😴',
-  'Motivated': '💪'
+  'Motivated': '🤔'
 };
 
 export default function DiaryPage() {
+  // Helper function for relative time
+  const getRelativeTime = (date: string) => {
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now.getTime() - past.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+    return `${Math.floor(diffDays / 365)}y ago`;
+  };
+
   const [diaries, setDiaries] = useState<Diary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingDiary, setEditingDiary] = useState<Diary | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [moodStats, setMoodStats] = useState<{ mood: string; count: number }[]>([]);
+  const [diaryToDelete, setDiaryToDelete] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<DiaryInput>({
     title: '',
@@ -48,6 +76,25 @@ export default function DiaryPage() {
   const [tagInput, setTagInput] = useState('');
   const [gratitudeInput, setGratitudeInput] = useState('');
   const [goalInput, setGoalInput] = useState('');
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setShowForm(true);
+        setEditingDiary(null);
+      }
+      if (e.key === 'Escape' && showForm) {
+        e.preventDefault();
+        setShowForm(false);
+        resetForm();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showForm]);
 
   useEffect(() => {
     fetchDiaries();
@@ -204,8 +251,47 @@ export default function DiaryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-6">
-        <p>Loading diary...</p>
+      <div className="p-6">
+        <div className="space-y-6">
+          {/* Header Skeleton */}
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-28" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+
+          {/* Grid Skeleton */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-lg border bg-card p-6 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-8 w-16" />
+                  </div>
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="h-20 w-full" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-6 w-16" />
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <Skeleton className="h-4 w-20" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -258,7 +344,8 @@ export default function DiaryPage() {
             <CardHeader>
               <CardTitle>{editingDiary ? 'Edit Diary Entry' : 'New Diary Entry'}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <ScrollArea className="max-h-[600px]">
+              <CardContent className="space-y-4 pr-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="date">Date *</Label>
@@ -420,6 +507,7 @@ export default function DiaryPage() {
                 </label>
               </div>
             </CardContent>
+            </ScrollArea>
             <CardFooter className="flex gap-2">
               <Button type="submit">{editingDiary ? 'Update Entry' : 'Create Entry'}</Button>
               <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
@@ -436,95 +524,138 @@ export default function DiaryPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {diaries.map(diary => (
-            <Card key={diary._id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl">{MOOD_EMOJIS[diary.mood]}</span>
-                      <Badge variant="outline">{diary.mood}</Badge>
-                      {diary.isPrivate && <Badge variant="secondary">Private</Badge>}
+        <TooltipProvider>
+          <div className="space-y-4">
+            {diaries.map(diary => (
+              <Card key={diary._id} className="animate-in fade-in duration-300 hover:shadow-lg transition-all">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">{MOOD_EMOJIS[diary.mood]}</span>
+                        <Badge className={MOOD_COLORS[MOOD_EMOJIS[diary.mood]] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}>{diary.mood}</Badge>
+                        {diary.isPrivate && <Badge variant="secondary">Private</Badge>}
+                      </div>
+                      <CardTitle>{diary.title}</CardTitle>
+                      <CardDescription>
+                        {new Date(diary.date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                        {diary.weather && ` • ${diary.weather}`}
+                        {diary.location && ` • 📍 ${diary.location}`}
+                      </CardDescription>
                     </div>
-                    <CardTitle>{diary.title}</CardTitle>
-                    <CardDescription>
-                      {new Date(diary.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                      {diary.weather && ` • ${diary.weather}`}
-                      {diary.location && ` • 📍 ${diary.location}`}
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleEdit(diary)}
-                      title="Edit"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDelete(diary._id)}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm whitespace-pre-wrap">{diary.content}</p>
-
-                {diary.gratitudeList.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Grateful for:</h4>
-                    <ul className="list-disc list-inside space-y-1 text-sm">
-                      {diary.gratitudeList.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {diary.goals.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Goals:</h4>
-                    <div className="space-y-1">
-                      {diary.goals.map((goal, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                          {goal.completed ? (
-                            <CheckSquare className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Square className="h-4 w-4" />
-                          )}
-                          <span className={goal.completed ? 'line-through text-muted-foreground' : ''}>
-                            {goal.description}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="flex gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEdit(diary)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit Entry</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDiaryToDelete(diary._id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete Entry</TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
-                )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm whitespace-pre-wrap">{diary.content}</p>
 
-                {diary.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {diary.tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  {diary.gratitudeList.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Grateful for:</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        {diary.gratitudeList.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {diary.goals.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Goals:</h4>
+                      <div className="space-y-1">
+                        {diary.goals.map((goal, index) => (
+                          <div key={index} className="flex items-center gap-2 text-sm">
+                            {goal.completed ? (
+                              <CheckSquare className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Square className="h-4 w-4" />
+                            )}
+                            <span className={goal.completed ? 'line-through text-muted-foreground' : ''}>
+                              {goal.description}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {diary.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {diary.tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex justify-between items-center text-xs text-muted-foreground border-t pt-4">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">{getRelativeTime(diary.createdAt || diary.date)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {new Date(diary.createdAt || diary.date).toLocaleString()}
+                    </TooltipContent>
+                  </Tooltip>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </TooltipProvider>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!diaryToDelete} onOpenChange={(open) => !open && setDiaryToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your diary entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (diaryToDelete) {
+                handleDelete(diaryToDelete);
+                setDiaryToDelete(null);
+              }
+            }}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </div>
   );

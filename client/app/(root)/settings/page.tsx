@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -132,8 +133,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="space-y-6">
+    <div className="p-6 h-full">
+      <ScrollArea className="h-[calc(100vh-8rem)]">
+        <div className="space-y-6 pr-4">
             <div className="max-w-4xl space-y-6">
               <div>
                 <h2 className="text-2xl font-bold">Account Settings</h2>
@@ -362,7 +364,8 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+      </ScrollArea>
     </div>
   );
 }

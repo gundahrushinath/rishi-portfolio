@@ -11,12 +11,19 @@ import {
   Calendar,
   Tag,
   Trash2,
+  Edit2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +35,21 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Resource, resourceService } from '@/lib/api';
+import { CATEGORY_BADGE_COLORS } from '@/lib/theme-colors';
+
+// Helper function for relative time
+const getRelativeTime = (date: string) => {
+  const now = new Date();
+  const resourceDate = new Date(date);
+  const diffInSeconds = Math.floor((now.getTime() - resourceDate.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)}w ago`;
+  return resourceDate.toLocaleDateString();
+};
 
 export default function ResourcesPage() {
 
@@ -63,6 +85,24 @@ export default function ResourcesPage() {
   useEffect(() => {
     fetchResources();
   }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setDialogOpen(true);
+      }
+      if (e.key === 'Escape' && dialogOpen) {
+        e.preventDefault();
+        setDialogOpen(false);
+        setEditingResource(null);
+        setFormData({ title: '', description: '', category: 'Tutorial', url: '', thumbnail: '', tags: '', isFeatured: false });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dialogOpen]);
 
   const fetchResources = async () => {
     try {
@@ -170,8 +210,38 @@ export default function ResourcesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-6">
-        <p>Loading resources...</p>
+      <div className="p-6">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-full mb-1" />
+                  <Skeleton className="h-4 w-2/3" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 mb-3">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-9 w-full" />
+                </CardContent>
+                <CardFooter>
+                  <Skeleton className="h-3 w-24" />
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -229,7 +299,7 @@ export default function ResourcesPage() {
               </div>
 
               {/* Resources Grid */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300">
                 {resources.map((resource) => {
                   const getCategoryIcon = () => {
                     if (resource.category === 'Video' || resource.category === 'Course') return Video;
@@ -238,13 +308,13 @@ export default function ResourcesPage() {
                   };
                   const ResourceIcon = getCategoryIcon();
                   return (
-                    <Card key={resource._id} className="hover:shadow-lg transition-shadow">
+                    <Card key={resource._id} className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200">
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div className="rounded-lg bg-primary/10 p-3">
                             <ResourceIcon className="h-6 w-6 text-primary" />
                           </div>
-                          <Badge variant="outline">{resource.category}</Badge>
+                          <Badge className={CATEGORY_BADGE_COLORS[resource.category] || CATEGORY_BADGE_COLORS['Other']}>{resource.category}</Badge>
                         </div>
                         <CardTitle className="mt-4 text-lg">{resource.title}</CardTitle>
                         <CardDescription className="line-clamp-2">
@@ -252,52 +322,97 @@ export default function ResourcesPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="flex flex-wrap gap-2">
-                          {resource.tags.map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              <Tag className="h-3 w-3 mr-1" />
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            Created: {new Date(resource.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {resource.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {resource.tags.map((tag) => (
+                              <Badge key={tag} variant="secondary" className="text-xs">
+                                <Tag className="h-3 w-3 mr-1" />
+                                {tag}
+                              </Badge>
+                            ))}
                           </div>
-                          {resource.isFeatured && (
-                            <Badge variant="secondary" className="w-fit text-xs">
-                              Featured
-                            </Badge>
-                          )}
-                        </div>
+                        )}
+                        {resource.isFeatured && (
+                          <Badge variant="secondary" className="w-fit text-xs">
+                            Featured
+                          </Badge>
+                        )}
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(resource)}>
-                            Edit
-                          </Button>
-                          {resource.url && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => window.open(resource.url, '_blank')}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                          onClick={() => handleDeleteClick(resource._id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(resource)}>
+                                  <Edit2 className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Edit resource</p></TooltipContent>
+                            </Tooltip>
+
+                            {resource.url && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => window.open(resource.url, '_blank')}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Open link</p></TooltipContent>
+                              </Tooltip>
+                            )}
+
+                            <AlertDialog>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Delete resource</p></TooltipContent>
+                              </Tooltip>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Resource?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete "{resource.title}". This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteClick(resource._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TooltipProvider>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="text-xs text-muted-foreground">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">{getRelativeTime(resource.createdAt)}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-xs space-y-1">
+                              <p>Created: {new Date(resource.createdAt).toLocaleString()}</p>
+                              {resource.updatedAt && resource.updatedAt !== resource.createdAt && (
+                                <p>Updated: {new Date(resource.updatedAt).toLocaleString()}</p>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
         {/* New Resource Dialog */}
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -315,7 +430,8 @@ export default function ResourcesPage() {
               </DialogDescription>
             </DialogHeader>
                     <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
+            <ScrollArea className="max-h-[500px]">
+              <div className="space-y-4 py-4 pr-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Resource Title *</Label>
                 <Input
@@ -411,6 +527,7 @@ export default function ResourcesPage() {
                 <Label htmlFor="isFeatured">Mark as featured</Label>
               </div>
             </div>
+            </ScrollArea>
 
             <DialogFooter>
               <Button
