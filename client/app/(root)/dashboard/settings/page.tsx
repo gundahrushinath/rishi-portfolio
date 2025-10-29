@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loading } from '@/components/ui/loading';
+import { Spinner } from '@/components/ui/spinner';
 import { 
   LayoutDashboard, 
   Home, 
@@ -15,7 +16,8 @@ import {
   Bell,
   Lock,
   Shield,
-  Palette
+  Palette,
+  AlertTriangle
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -45,6 +55,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { authService } from '@/services/authService';
+import { toast } from 'sonner';
 
 const navigationItems = [
   {
@@ -99,14 +111,120 @@ function DashboardSidebar() {
 }
 
 export default function SettingsPage() {
-  const { user, loading, isAuthenticated, signout } = useAuth();
+  const { user, loading, isAuthenticated, signout, updateUser } = useAuth();
   const router = useRouter();
+
+  // Username state
+  const [username, setUsername] = useState('');
+  const [usernameLoading, setUsernameLoading] = useState(false);
+
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Delete account state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push('/signin');
     }
-  }, [loading, isAuthenticated, router]);
+    if (user) {
+      setUsername(user.name || '');
+    }
+  }, [loading, isAuthenticated, router, user]);
+
+  const handleUpdateUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!username || username.trim().length === 0) {
+      toast.error('Name cannot be empty');
+      return;
+    }
+
+    if (username.trim() === user?.name) {
+      toast.info('No changes to save');
+      return;
+    }
+
+    setUsernameLoading(true);
+
+    try {
+      const response = await authService.updateProfile(username.trim());
+      updateUser(response.user);
+      toast.success('Name updated successfully');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to update name';
+      toast.error(errorMessage);
+    } finally {
+      setUsernameLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('All fields are required');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    try {
+      await authService.updatePassword(currentPassword, newPassword);
+      toast.success('Password updated successfully');
+      
+      // Clear form
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to update password';
+      toast.error(errorMessage);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      toast.error('Please enter your password to confirm');
+      return;
+    }
+
+    setDeleteLoading(true);
+
+    try {
+      await authService.deleteAccount(deletePassword);
+      toast.success('Account deleted successfully');
+      
+      // Sign out and redirect
+      setTimeout(() => {
+        signout();
+        router.push('/');
+      }, 1500);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to delete account';
+      toast.error(errorMessage);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   if (loading) {
     return <Loading fullScreen text="Loading settings..." />;
@@ -202,19 +320,39 @@ export default function SettingsPage() {
                     <CardTitle>Account Information</CardTitle>
                   </div>
                   <CardDescription>
-                    Update your account details and email preferences
+                    Update your account details
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="settings-name">Full Name</Label>
-                    <Input id="settings-name" defaultValue={user.name} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="settings-email">Email Address</Label>
-                    <Input id="settings-email" type="email" defaultValue={user.email} />
-                  </div>
-                  <Button>Save Changes</Button>
+                <CardContent>
+                  <form onSubmit={handleUpdateUsername} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="settings-name">Full Name</Label>
+                      <Input 
+                        id="settings-name" 
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Enter your full name"
+                        disabled={usernameLoading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="settings-email">Email Address</Label>
+                      <Input 
+                        id="settings-email" 
+                        type="email" 
+                        defaultValue={user.email}
+                        disabled
+                        className="bg-muted cursor-not-allowed opacity-60"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Email cannot be changed for security reasons
+                      </p>
+                    </div>
+                    <Button type="submit" disabled={usernameLoading}>
+                      {usernameLoading && <Spinner className="mr-2" />}
+                      {usernameLoading ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
 
@@ -229,20 +367,46 @@ export default function SettingsPage() {
                     Manage your password and security preferences
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <Input id="current-password" type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password</Label>
-                    <Input id="new-password" type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm New Password</Label>
-                    <Input id="confirm-password" type="password" />
-                  </div>
-                  <Button>Update Password</Button>
+                <CardContent>
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input 
+                        id="current-password" 
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter current password"
+                        disabled={passwordLoading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input 
+                        id="new-password" 
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password (min 6 characters)"
+                        disabled={passwordLoading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input 
+                        id="confirm-password" 
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        disabled={passwordLoading}
+                      />
+                    </div>
+                    <Button type="submit" disabled={passwordLoading}>
+                      {passwordLoading && <Spinner className="mr-2" />}
+                      {passwordLoading ? 'Updating...' : 'Update Password'}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
 
@@ -299,7 +463,13 @@ export default function SettingsPage() {
                         Permanently delete your account and all associated data
                       </p>
                     </div>
-                    <Button variant="destructive" size="sm">Delete Account</Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      Delete Account
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -307,6 +477,64 @@ export default function SettingsPage() {
           </main>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Account
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">Enter your password to confirm</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                placeholder="Enter your password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                disabled={deleteLoading}
+              />
+            </div>
+            <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+              <p className="font-medium">Warning:</p>
+              <ul className="mt-2 list-inside list-disc space-y-1">
+                <li>All your projects will be deleted</li>
+                <li>All your resources will be removed</li>
+                <li>This action cannot be reversed</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDeletePassword('');
+              }}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading || !deletePassword}
+            >
+              {deleteLoading && <Spinner className="mr-2" />}
+              {deleteLoading ? 'Deleting...' : 'Delete Account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }

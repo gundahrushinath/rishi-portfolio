@@ -23,6 +23,7 @@ export default function SignUpPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,6 +67,23 @@ export default function SignUpPage() {
     }
   };
 
+  const handleResendEmail = async () => {
+    setResendingEmail(true);
+    try {
+      await authService.resendVerification(email);
+      toast.success('Email sent!', {
+        description: 'Verification email has been resent. Please check your inbox.',
+      });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to resend verification email';
+      toast.error('Resend failed', {
+        description: errorMessage,
+      });
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   if (success) {
     return (
       <SuccessMessage
@@ -90,6 +108,15 @@ export default function SignUpPage() {
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
             Go to Sign In
+          </Button>
+          <Button
+            onClick={handleResendEmail}
+            variant="outline"
+            className="w-full"
+            disabled={resendingEmail}
+          >
+            {resendingEmail && <Spinner className="mr-2" />}
+            {resendingEmail ? 'Sending...' : "Didn't receive email? Resend"}
           </Button>
           <p className="text-xs text-slate-400">
             Already verified?{' '}

@@ -7,7 +7,10 @@ import {
   verifyEmail, 
   resendVerification,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  updatePassword,
+  updateProfile,
+  deleteAccount
 } from '../controllers/authController';
 import { authMiddleware } from '../middleware/auth';
 
@@ -21,5 +24,8 @@ router.get('/verify-email', verifyEmail);
 router.post('/resend-verification', resendVerification);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+router.put('/update-password', authMiddleware, updatePassword);
+router.put('/update-profile', authMiddleware, updateProfile);
+router.delete('/delete-account', authMiddleware, deleteAccount);
 
 export default router;

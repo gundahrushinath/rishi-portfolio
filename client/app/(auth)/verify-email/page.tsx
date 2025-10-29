@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -8,14 +8,16 @@ import { Mail } from 'lucide-react';
 import { AuthCard } from '@/components/auth/AuthCard';
 import { SuccessMessage } from '@/components/auth/SuccessMessage';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const { updateUser } = useAuth();
 
   useEffect(() => {
     if (!token) {
@@ -36,14 +38,20 @@ export default function VerifyEmailPage() {
 
       setStatus('success');
       setMessage(response.message);
+      
+      // Update auth context with the logged-in user
+      if (response.user) {
+        updateUser(response.user);
+      }
+
       toast.success('Email verified!', {
-        description: 'Your email has been successfully verified.',
+        description: 'Your email has been successfully verified. You are now logged in!',
       });
 
-      // Redirect to dashboard after 3 seconds
+      // Redirect to dashboard after 2 seconds (reduced from 3)
       setTimeout(() => {
         router.push('/dashboard');
-      }, 3000);
+      }, 2000);
     } catch (error: any) {
       setStatus('error');
       const errorMessage = error.response?.data?.message || 'Email verification failed';
@@ -72,11 +80,17 @@ export default function VerifyEmailPage() {
     return (
       <SuccessMessage
         title="Email Verified!"
-        description={message}
+        description="Your account has been successfully verified and you're now logged in!"
       >
-        <div className="text-center">
-          <p className="text-slate-300 mb-4">
-            Redirecting to dashboard in 3 seconds...
+        <div className="text-center space-y-4">
+          <div className="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-md text-sm">
+            <p className="font-semibold mb-2">✓ Welcome aboard!</p>
+            <p className="text-xs">
+              You can now access all features of your dashboard.
+            </p>
+          </div>
+          <p className="text-slate-300 text-sm">
+            Redirecting to dashboard in 2 seconds...
           </p>
           <Button
             onClick={() => router.push('/dashboard')}
@@ -111,5 +125,13 @@ export default function VerifyEmailPage() {
         </Button>
       </div>
     </AuthCard>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Spinner /></div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

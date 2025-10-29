@@ -29,6 +29,26 @@ class AuthService {
     const response = await this.api.get(`/auth/verify-email?token=${token}`);
     return response.data;
   }
+
+  async resendVerification(email: string) {
+    const response = await this.api.post('/auth/resend-verification', { email });
+    return response.data;
+  }
+
+  async updatePassword(currentPassword: string, newPassword: string) {
+    const response = await this.api.put('/auth/update-password', { currentPassword, newPassword });
+    return response.data;
+  }
+
+  async updateProfile(name: string) {
+    const response = await this.api.put('/auth/update-profile', { name });
+    return response.data;
+  }
+
+  async deleteAccount(password: string) {
+    const response = await this.api.delete('/auth/delete-account', { data: { password } });
+    return response.data;
+  }
 }
 
 export const authService = new AuthService();

@@ -11,6 +11,7 @@ interface AuthContextType {
   signin: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   signout: () => Promise<void>;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
 }
 
@@ -72,6 +73,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -80,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signin,
         signup,
         signout,
+        updateUser,
         isAuthenticated: !!user,
       }}
     >

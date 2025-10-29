@@ -11,20 +11,21 @@ export interface DashboardStats {
 }
 
 export interface Project {
-  id: string;
+  _id: string;
+  userId: string;
   title: string;
   description: string;
-  image?: string;
+  status: 'Active' | 'In Progress' | 'Completed';
   tags: string[];
-  demoUrl?: string;
-  sourceUrl?: string;
-  status: 'draft' | 'published' | 'archived';
+  dueDate?: string;
+  link?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface Resource {
-  id: string;
+  _id: string;
+  userId: string;
   title: string;
   description: string;
   category: string;
@@ -33,6 +34,62 @@ export interface Resource {
   tags: string[];
   isFeatured: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface Note {
+  _id: string;
+  userId: string;
+  title: string;
+  content: string;
+  category: 'Personal' | 'Work' | 'Study' | 'Ideas' | 'Code Snippet' | 'Meeting' | 'Other';
+  tags: string[];
+  isPinned: boolean;
+  isArchived: boolean;
+  color: string;
+  reminder?: string;
+  attachments: { name: string; url: string; type: string }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Diary {
+  _id: string;
+  userId: string;
+  title: string;
+  content: string;
+  date: string;
+  mood: 'Happy' | 'Sad' | 'Neutral' | 'Excited' | 'Anxious' | 'Grateful' | 'Tired' | 'Motivated';
+  weather?: string;
+  tags: string[];
+  isPrivate: boolean;
+  location?: string;
+  images: string[];
+  gratitudeList: string[];
+  goals: { description: string; completed: boolean }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Todo {
+  _id: string;
+  userId: string;
+  title: string;
+  description: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  status: 'Todo' | 'In Progress' | 'Completed' | 'Cancelled';
+  category: 'Work' | 'Personal' | 'Study' | 'Health' | 'Shopping' | 'Other';
+  dueDate?: string;
+  completedAt?: string;
+  tags: string[];
+  subtasks: { _id?: string; title: string; completed: boolean; completedAt?: string }[];
+  estimatedTime?: number;
+  actualTime?: number;
+  recurring?: { enabled: boolean; frequency: string; endDate?: string };
+  reminder?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Activity {

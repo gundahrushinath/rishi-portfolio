@@ -1,6 +1,11 @@
 import { toast } from 'sonner';
 
 /**
+ * Re-export toast for convenience
+ */
+export { toast };
+
+/**
  * Utility functions for common toast patterns
  */
 export const toastUtils = {
