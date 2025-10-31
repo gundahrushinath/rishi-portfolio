@@ -1,6 +1,10 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermission } from '@/hooks/use-permission';
+import { NoAccess } from '@/components/auth/NoAccess';
+import { Permission } from '@/models/user';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Mail } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -9,7 +13,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const canRead = usePermission(Permission.USER_READ);
+  const canUpdate = usePermission(Permission.USER_UPDATE);
+
+  // Auth loading check
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-32 w-full max-w-4xl" />
+        <Skeleton className="h-64 w-full max-w-4xl" />
+        <div className="grid gap-4 md:grid-cols-3 max-w-4xl">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      </div>
+    );
+  }
+
+  // Permission check
+  if (!canRead) {
+    return <NoAccess feature="Profile" permission={Permission.USER_READ} />;
+  }
 
   if (!user) {
     return null;
@@ -38,7 +64,12 @@ export default function ProfilePage() {
                   {user.email}
                 </CardDescription>
               </div>
-              <Button>Edit Profile</Button>
+              {canUpdate && <Button>Edit Profile</Button>}
+              {!canUpdate && (
+                <p className="text-xs text-muted-foreground">
+                  View-only mode
+                </p>
+              )}
             </div>
           </CardHeader>
         </Card>

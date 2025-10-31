@@ -19,6 +19,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from '@/lib/toast';
 import { Plus, Trash2, Edit2, X, CheckSquare, Square, BarChart3, Calendar } from 'lucide-react';
 import { PRIORITY_BADGE_COLORS, STATUS_BADGE_COLORS, CATEGORY_BADGE_COLORS } from '@/lib/theme-colors';
+import { usePermission } from '@/hooks/use-permission';
+import { Permission } from '@/models/user';
+import { NoAccess } from '@/components/auth/NoAccess';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'] as const;
 const STATUS_OPTIONS = ['Todo', 'In Progress', 'Completed', 'Cancelled'] as const;
@@ -39,6 +43,14 @@ const getRelativeTime = (date: string) => {
 };
 
 export default function TodoPage() {
+  const { loading: authLoading } = useAuth();
+  
+  // Permission checks
+  const canRead = usePermission(Permission.TODO_READ);
+  const canCreate = usePermission(Permission.TODO_CREATE);
+  const canUpdate = usePermission(Permission.TODO_UPDATE);
+  const canDelete = usePermission(Permission.TODO_DELETE);
+  
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -68,9 +80,12 @@ export default function TodoPage() {
   const [subtaskInput, setSubtaskInput] = useState('');
 
   useEffect(() => {
-    fetchTodos();
-    fetchStatistics();
-  }, [filterPriority, filterStatus, filterCategory]);
+    // Only fetch if user has read permission and auth is loaded
+    if (!authLoading && canRead) {
+      fetchTodos();
+      fetchStatistics();
+    }
+  }, [filterPriority, filterStatus, filterCategory, canRead, authLoading]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -89,6 +104,9 @@ export default function TodoPage() {
   }, [showForm]);
 
   const fetchTodos = async () => {
+    // Only fetch if user has read permission
+    if (!canRead) return;
+    
     try {
       setLoading(true);
       const filters: any = {};
@@ -99,18 +117,27 @@ export default function TodoPage() {
       const response = await todoService.getAll(filters);
       setTodos(response.todos);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to fetch todos');
+      // Don't show error if it's a 403 (permission denied) - we handle this with NoAccess component
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || 'Failed to fetch todos');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchStatistics = async () => {
+    // Only fetch if user has read permission
+    if (!canRead) return;
+    
     try {
       const response = await todoService.getStatistics();
       setStatistics(response.statistics);
     } catch (error: any) {
-      console.error('Failed to fetch statistics:', error);
+      // Don't log error if it's a 403 (permission denied)
+      if (error.response?.status !== 403) {
+        console.error('Failed to fetch statistics:', error);
+      }
     }
   };
 
@@ -249,6 +276,33 @@ export default function TodoPage() {
     return new Date(dueDate) < new Date() && !['Completed', 'Cancelled'].includes(formData.status || '');
   };
 
+  // Wait for auth to load before checking permissions
+  if (authLoading) {
+    return (
+      <div className="p-6">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has read permission
+  if (!canRead) {
+    return <NoAccess feature="Todos" permission="TODO_READ" />;
+  }
+
   return (
     <div className="p-6">
       <div className="space-y-6">
@@ -262,10 +316,12 @@ export default function TodoPage() {
             <BarChart3 className="mr-2 h-4 w-4" />
             {showStats ? 'Hide Stats' : 'Statistics'}
           </Button>
-          <Button onClick={() => setShowForm(!showForm)}>
-            {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-            {showForm ? 'Cancel' : 'New Todo'}
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setShowForm(!showForm)}>
+              {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+              {showForm ? 'Cancel' : 'New Todo'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -572,76 +628,82 @@ export default function TodoPage() {
                     </div>
                     <div className="flex gap-1">
                       <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="min-w-[120px]">
-                              <Select
-                                value={todo.status}
-                                onValueChange={(value) => handleStatusChange(todo._id, value)}
-                              >
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {STATUS_OPTIONS.map(status => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Change status</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        {canUpdate && (
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="min-w-[120px]">
+                                  <Select
+                                    value={todo.status}
+                                    onValueChange={(value) => handleStatusChange(todo._id, value)}
+                                  >
+                                    <SelectTrigger className="h-8 text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {STATUS_OPTIONS.map(status => (
+                                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Change status</p>
+                              </TooltipContent>
+                            </Tooltip>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleEdit(todo)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Edit</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <AlertDialog open={todoToDelete === todo._id} onOpenChange={(open) => !open && setTodoToDelete(null)}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <AlertDialogTrigger asChild>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  onClick={() => setTodoToDelete(todo._id)}
+                                  onClick={() => handleEdit(todo)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Edit2 className="h-4 w-4" />
                                 </Button>
-                              </AlertDialogTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Task?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete "{todo.title}". This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(todo._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        )}
+
+                        {canDelete && (
+                          <AlertDialog open={todoToDelete === todo._id} onOpenChange={(open) => !open && setTodoToDelete(null)}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => setTodoToDelete(todo._id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Task?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete "{todo.title}". This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(todo._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </TooltipProvider>
                     </div>
                   </div>

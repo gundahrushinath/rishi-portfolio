@@ -1,11 +1,13 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { UserRole } from '../types/rbac';
 
 export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
+  role: UserRole;
   emailVerified: boolean;
   verificationToken?: string;
   verificationTokenExpires?: Date;
@@ -35,6 +37,11 @@ const userSchema = new Schema<IUser>({
     type: String,
     required: [true, 'Name is required'],
     trim: true
+  },
+  role: {
+    type: String,
+    enum: Object.values(UserRole),
+    default: UserRole.USER
   },
   emailVerified: {
     type: Boolean,

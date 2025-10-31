@@ -20,6 +20,10 @@ import { toast } from '@/lib/toast';
 import { Plus, Pin, Archive, Copy, Trash2, Edit2, X, Search } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { NOTE_COLORS, getNoteColor } from '@/lib/theme-colors';
+import { usePermission } from '@/hooks/use-permission';
+import { Permission } from '@/models/user';
+import { NoAccess } from '@/components/auth/NoAccess';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NOTE_CATEGORIES = ['Personal', 'Work', 'Study', 'Ideas', 'Code Snippet', 'Meeting', 'Other'] as const;
 
@@ -39,6 +43,14 @@ const getRelativeTime = (date: string) => {
 
 export default function NotesPage() {
   const { theme } = useTheme();
+  const { loading: authLoading } = useAuth();
+  
+  // Permission checks
+  const canRead = usePermission(Permission.NOTE_READ);
+  const canCreate = usePermission(Permission.NOTE_CREATE);
+  const canUpdate = usePermission(Permission.NOTE_UPDATE);
+  const canDelete = usePermission(Permission.NOTE_DELETE);
+  
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -62,8 +74,11 @@ export default function NotesPage() {
   const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
-    fetchNotes();
-  }, [filterCategory, filterPinned, filterArchived, searchQuery]);
+    // Only fetch if user has read permission and auth is loaded
+    if (!authLoading && canRead) {
+      fetchNotes();
+    }
+  }, [filterCategory, filterPinned, filterArchived, searchQuery, canRead, authLoading]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -85,6 +100,9 @@ export default function NotesPage() {
   }, [showForm]);
 
   const fetchNotes = async () => {
+    // Only fetch if user has read permission
+    if (!canRead) return;
+    
     try {
       setLoading(true);
       const filters: any = {};
@@ -97,7 +115,10 @@ export default function NotesPage() {
       const response = await noteService.getAll(filters);
       setNotes(response.notes);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to fetch notes');
+      // Don't show error if it's a 403 (permission denied) - we handle this with NoAccess component
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || 'Failed to fetch notes');
+      }
     } finally {
       setLoading(false);
     }
@@ -224,6 +245,33 @@ export default function NotesPage() {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
+  // Wait for auth to load before checking permissions
+  if (authLoading) {
+    return (
+      <div className="p-6">
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has read permission
+  if (!canRead) {
+    return <NoAccess feature="Notes" permission="NOTE_READ" />;
+  }
+
   if (loading) {
     return (
       <div className="p-6">
@@ -276,10 +324,12 @@ export default function NotesPage() {
           <h2 className="text-3xl font-bold tracking-tight">My Notes</h2>
           <p className="text-muted-foreground">Organize your thoughts and ideas</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Note
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setShowForm(!showForm)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Note
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
@@ -554,98 +604,108 @@ export default function NotesPage() {
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => togglePin(note)}
-                          >
-                            <Pin className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{note.isPinned ? 'Unpin' : 'Pin'}</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleEdit(note)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Edit</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleDuplicate(note._id)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Duplicate</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => toggleArchive(note)}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{note.isArchived ? 'Unarchive' : 'Archive'}</p>
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <AlertDialog open={noteToDelete === note._id} onOpenChange={(open) => !open && setNoteToDelete(null)}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
+                      {canUpdate && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => setNoteToDelete(note._id)}
+                                onClick={() => togglePin(note)}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Pin className="h-4 w-4" />
                               </Button>
-                            </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{note.isPinned ? 'Unpin' : 'Pin'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleEdit(note)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
+
+                      {canCreate && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDuplicate(note._id)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Delete</p>
+                            <p>Duplicate</p>
                           </TooltipContent>
                         </Tooltip>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the note "{note.title}".
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(note._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      )}
+
+                      {canUpdate && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => toggleArchive(note)}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{note.isArchived ? 'Unarchive' : 'Archive'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {canDelete && (
+                        <AlertDialog open={noteToDelete === note._id} onOpenChange={(open) => !open && setNoteToDelete(null)}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => setNoteToDelete(note._id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the note "{note.title}".
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(note._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </TooltipProvider>
                   </div>
                 </div>

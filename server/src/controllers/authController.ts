@@ -5,6 +5,7 @@ import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { Types } from 'mongoose';
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../services/emailService';
+import { getCurrentRolePermissions } from './roleController';
 
 const generateToken = (userId: string): string => {
   return jwt.sign({ userId }, process.env.JWT_SECRET as string, {
@@ -53,7 +54,11 @@ export const signup = async (req: Request, res: Response) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        emailVerified: user.emailVerified
+        role: user.role,
+        emailVerified: user.emailVerified,
+        isVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.createdAt
       }
     });
   } catch (error) {
@@ -193,13 +198,22 @@ export const signin = async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
+    // Get dynamic permissions for the user's role
+    const rolePermissions = getCurrentRolePermissions();
+    const userPermissions = rolePermissions[user.role] || [];
+
     res.status(200).json({
       message: 'Signed in successfully',
       user: {
         id: user._id,
         email: user.email,
         name: user.name,
-        emailVerified: user.emailVerified
+        role: user.role,
+        permissions: userPermissions,
+        emailVerified: user.emailVerified,
+        isVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.createdAt
       }
     });
   } catch (error) {
@@ -225,12 +239,21 @@ export const verifyToken = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Get dynamic permissions for the user's role
+    const rolePermissions = getCurrentRolePermissions();
+    const userPermissions = rolePermissions[user.role] || [];
+
     res.status(200).json({
       user: {
         id: user._id,
         email: user.email,
         name: user.name,
-        emailVerified: user.emailVerified
+        role: user.role,
+        permissions: userPermissions,
+        emailVerified: user.emailVerified,
+        isVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.createdAt
       }
     });
   } catch (error) {
@@ -367,12 +390,18 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     user.name = name.trim();
     await user.save();
 
+    // Get dynamic permissions for the user's role
+    const rolePermissions = getCurrentRolePermissions();
+    const userPermissions = rolePermissions[user.role] || [];
+
     res.status(200).json({ 
       message: 'Profile updated successfully',
       user: {
         id: user._id,
         email: user.email,
         name: user.name,
+        role: user.role,
+        permissions: userPermissions,
         emailVerified: user.emailVerified
       }
     });

@@ -90,7 +90,7 @@ export default function SignUpPage() {
         title="Check Your Email!"
         description={`We've sent a verification link to ${email}`}
       >
-        <div className="bg-blue-500/10 border border-blue-500 text-blue-400 px-4 py-3 rounded-md text-sm">
+        <div className="bg-primary/10 border border-primary text-primary px-4 py-3 rounded-md text-sm">
           <p className="font-semibold mb-2 flex items-center gap-2">
             <Mail className="h-4 w-4" />
             Verification Email Sent
@@ -98,14 +98,14 @@ export default function SignUpPage() {
           <p className="mb-2">
             Please check your inbox and click the verification link to activate your account.
           </p>
-          <p className="text-xs">
+          <p className="text-xs opacity-80">
             The link will expire in 24 hours. If you don't see it, check your spam folder.
           </p>
         </div>
         <div className="text-center space-y-2">
           <Button
             onClick={() => router.push('/signin')}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full"
           >
             Go to Sign In
           </Button>
@@ -118,9 +118,9 @@ export default function SignUpPage() {
             {resendingEmail && <Spinner className="mr-2" />}
             {resendingEmail ? 'Sending...' : "Didn't receive email? Resend"}
           </Button>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             Already verified?{' '}
-            <Link href="/signin" className="text-blue-400 hover:text-blue-300">
+            <Link href="/signin" className="text-primary hover:text-primary/80 transition-colors">
               Sign in now
             </Link>
           </p>
@@ -180,7 +180,7 @@ export default function SignUpPage() {
 
         <Button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 h-10 sm:h-11 text-sm sm:text-base"
+          className="w-full h-10 sm:h-11 text-sm sm:text-base"
           disabled={loading}
         >
           {loading && <Spinner className="mr-2" />}

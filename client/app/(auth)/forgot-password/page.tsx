@@ -46,25 +46,25 @@ export default function ForgotPasswordPage() {
         title="Check Your Email"
         description="If an account exists with that email, we've sent password reset instructions."
       >
-        <div className="bg-blue-500/10 border border-blue-500 text-blue-400 px-4 py-3 rounded-md text-sm">
+        <div className="bg-primary/10 border border-primary text-primary px-4 py-3 rounded-md text-sm">
           <p className="font-semibold mb-1">📧 Email Sent!</p>
           <p>Please check your inbox and follow the instructions to reset your password.</p>
-          <p className="mt-2 text-xs">The link will expire in 1 hour.</p>
+          <p className="mt-2 text-xs opacity-80">The link will expire in 1 hour.</p>
         </div>
         <div className="text-center space-y-2">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             Didn't receive the email? Check your spam folder.
           </p>
           <Button
             onClick={() => setSuccess(false)}
             variant="outline"
-            className="border-slate-700 hover:bg-slate-800"
+            className="w-full"
           >
             Try Another Email
           </Button>
         </div>
         <div className="text-center">
-          <Link href="/signin" className="text-sm text-blue-400 hover:text-blue-300">
+          <Link href="/signin" className="text-sm text-primary hover:text-primary/80 transition-colors">
             ← Back to sign in
           </Link>
         </div>
@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
 
         <Button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 h-10 sm:h-11 text-sm sm:text-base"
+          className="w-full h-10 sm:h-11 text-sm sm:text-base"
           disabled={loading}
         >
           {loading && <Spinner className="mr-2" />}
@@ -103,12 +103,12 @@ export default function ForgotPasswordPage() {
       </form>
       
       <div className="mt-6 text-center space-y-2">
-        <Link href="/signin" className="text-sm text-blue-400 hover:text-blue-300 block">
+        <Link href="/signin" className="text-sm text-primary hover:text-primary/80 transition-colors block">
           ← Back to sign in
         </Link>
-        <div className="text-sm text-slate-400">
+        <div className="text-sm text-muted-foreground">
           Don't have an account?{' '}
-          <Link href="/signup" className="text-blue-400 hover:text-blue-300">
+          <Link href="/signup" className="text-primary hover:text-primary/80 transition-colors">
             Sign up
           </Link>
         </div>

@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermission } from '@/hooks/use-permission';
+import { NoAccess } from '@/components/auth/NoAccess';
 import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Lock,
   Shield,
@@ -25,9 +28,12 @@ import {
 } from '@/components/ui/dialog';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
+import { Permission } from '@/models/user';
 
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, loading } = useAuth();
+  const canRead = usePermission(Permission.SETTINGS_READ);
+  const canUpdate = usePermission(Permission.SETTINGS_UPDATE);
 
   // Username state
   const [username, setUsername] = useState('');
@@ -43,6 +49,26 @@ export default function SettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Auth loading check
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+        <div className="space-y-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  // Permission check
+  if (!canRead) {
+    return <NoAccess feature="Settings" permission={Permission.SETTINGS_READ} />;
+  }
 
   useEffect(() => {
     if (user) {
@@ -164,7 +190,7 @@ export default function SettingsPage() {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="Enter your full name"
-                        disabled={usernameLoading}
+                        disabled={usernameLoading || !canUpdate}
                       />
                     </div>
                     <div className="space-y-2">
@@ -180,10 +206,15 @@ export default function SettingsPage() {
                         Email cannot be changed for security reasons
                       </p>
                     </div>
-                    <Button type="submit" disabled={usernameLoading}>
+                    <Button type="submit" disabled={usernameLoading || !canUpdate}>
                       {usernameLoading && <Spinner className="mr-2" />}
                       {usernameLoading ? 'Saving...' : 'Save Changes'}
                     </Button>
+                    {!canUpdate && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        You don&apos;t have permission to update settings
+                      </p>
+                    )}
                   </form>
                 </CardContent>
               </Card>
@@ -209,7 +240,7 @@ export default function SettingsPage() {
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         placeholder="Enter current password"
-                        disabled={passwordLoading}
+                        disabled={passwordLoading || !canUpdate}
                       />
                     </div>
                     <div className="space-y-2">
@@ -220,7 +251,7 @@ export default function SettingsPage() {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Enter new password (min 6 characters)"
-                        disabled={passwordLoading}
+                        disabled={passwordLoading || !canUpdate}
                       />
                     </div>
                     <div className="space-y-2">
@@ -231,13 +262,18 @@ export default function SettingsPage() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm new password"
-                        disabled={passwordLoading}
+                        disabled={passwordLoading || !canUpdate}
                       />
                     </div>
-                    <Button type="submit" disabled={passwordLoading}>
+                    <Button type="submit" disabled={passwordLoading || !canUpdate}>
                       {passwordLoading && <Spinner className="mr-2" />}
                       {passwordLoading ? 'Updating...' : 'Update Password'}
                     </Button>
+                    {!canUpdate && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        You don&apos;t have permission to update settings
+                      </p>
+                    )}
                   </form>
                 </CardContent>
               </Card>
@@ -299,10 +335,16 @@ export default function SettingsPage() {
                       variant="destructive" 
                       size="sm"
                       onClick={() => setDeleteDialogOpen(true)}
+                      disabled={!canUpdate}
                     >
                       Delete Account
                     </Button>
                   </div>
+                  {!canUpdate && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      You don&apos;t have permission to delete your account
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>

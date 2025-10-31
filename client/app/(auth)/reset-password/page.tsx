@@ -85,17 +85,17 @@ function ResetPasswordContent() {
         title="Password Reset!"
         description="Your password has been successfully reset"
       >
-        <div className="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-md text-sm">
+        <div className="bg-emerald-500/10 border border-emerald-500 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-md text-sm">
           <p className="font-semibold mb-1">✓ Success!</p>
           <p>You can now sign in with your new password.</p>
         </div>
         <div className="text-center">
-          <p className="text-slate-300 mb-4">
+          <p className="text-foreground mb-4">
             Redirecting to sign in page in 3 seconds...
           </p>
           <Button
             onClick={() => router.push('/signin')}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full"
           >
             Sign In Now
           </Button>
@@ -138,7 +138,7 @@ function ResetPasswordContent() {
 
         <Button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 h-10 sm:h-11 text-sm sm:text-base"
+          className="w-full h-10 sm:h-11 text-sm sm:text-base"
           disabled={loading || !token}
         >
           {loading && <Spinner className="mr-2" />}
@@ -147,7 +147,7 @@ function ResetPasswordContent() {
       </form>
       
       <div className="mt-6 text-center">
-        <Link href="/signin" className="text-sm text-blue-400 hover:text-blue-300">
+        <Link href="/signin" className="text-sm text-primary hover:text-primary/80 transition-colors">
           ← Back to sign in
         </Link>
       </div>

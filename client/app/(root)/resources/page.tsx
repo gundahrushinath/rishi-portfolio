@@ -36,6 +36,10 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Resource, resourceService } from '@/lib/api';
 import { CATEGORY_BADGE_COLORS } from '@/lib/theme-colors';
+import { usePermission } from '@/hooks/use-permission';
+import { Permission } from '@/models/user';
+import { NoAccess } from '@/components/auth/NoAccess';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Helper function for relative time
 const getRelativeTime = (date: string) => {
@@ -52,6 +56,13 @@ const getRelativeTime = (date: string) => {
 };
 
 export default function ResourcesPage() {
+  const { loading: authLoading } = useAuth();
+  
+  // Permission checks
+  const canRead = usePermission(Permission.RESOURCE_READ);
+  const canCreate = usePermission(Permission.RESOURCE_CREATE);
+  const canUpdate = usePermission(Permission.RESOURCE_UPDATE);
+  const canDelete = usePermission(Permission.RESOURCE_DELETE);
 
   // Resources state
   const [resources, setResources] = useState<Resource[]>([]);
@@ -83,8 +94,11 @@ export default function ResourcesPage() {
 
   // Fetch resources on mount
   useEffect(() => {
-    fetchResources();
-  }, []);
+    // Only fetch if user has read permission and auth is loaded
+    if (!authLoading && canRead) {
+      fetchResources();
+    }
+  }, [canRead, authLoading]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -105,13 +119,19 @@ export default function ResourcesPage() {
   }, [dialogOpen]);
 
   const fetchResources = async () => {
+    // Only fetch if user has read permission
+    if (!canRead) return;
+    
     try {
       setIsLoading(true);
       const data = await resourceService.getAll();
       setResources(data.resources);
-    } catch (error) {
-      console.error('Error fetching resources:', error);
-      toast.error('Failed to load resources');
+    } catch (error: any) {
+      // Don't show error if it's a 403 (permission denied) - we handle this with NoAccess component
+      if (error.response?.status !== 403) {
+        console.error('Error fetching resources:', error);
+        toast.error('Failed to load resources');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -208,6 +228,33 @@ export default function ResourcesPage() {
     }
   };
 
+  // Wait for auth to load before checking permissions
+  if (authLoading) {
+    return (
+      <div className="p-6">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has read permission
+  if (!canRead) {
+    return <NoAccess feature="Resources" permission="RESOURCE_READ" />;
+  }
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -256,10 +303,12 @@ export default function ResourcesPage() {
               Access curated learning materials and resources
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Resource
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Resource
+            </Button>
+          )}
         </div>
 
         {/* Resource Stats */}

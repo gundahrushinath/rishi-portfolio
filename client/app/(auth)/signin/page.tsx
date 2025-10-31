@@ -68,7 +68,7 @@ export default function SignInPage() {
           onChange={setPassword}
           required
           labelExtra={
-            <Link href="/forgot-password" className="text-xs text-blue-400 hover:text-blue-300">
+            <Link href="/forgot-password" className="text-xs text-primary hover:text-primary/80 transition-colors">
               Forgot password?
             </Link>
           }
@@ -76,7 +76,7 @@ export default function SignInPage() {
 
         <Button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 h-10 sm:h-11 text-sm sm:text-base"
+          className="w-full h-10 sm:h-11 text-sm sm:text-base"
           disabled={loading}
         >
           {loading && <Spinner className="mr-2" />}

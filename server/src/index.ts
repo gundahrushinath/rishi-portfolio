@@ -4,6 +4,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/database';
 import authRoutes from './routes/authRoutes';
+import userRoutes from './routes/userRoutes';
+import roleRoutes from './routes/roleRoutes';
 import projectRoutes from './routes/projectRoutes';
 import resourceRoutes from './routes/resourceRoutes';
 import noteRoutes from './routes/noteRoutes';
@@ -31,6 +33,8 @@ app.use(cookieParser());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/notes', noteRoutes);

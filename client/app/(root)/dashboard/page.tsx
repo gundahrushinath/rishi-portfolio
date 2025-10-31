@@ -1,5 +1,7 @@
 'use client';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   FileText,
   BookOpen,
@@ -7,6 +9,30 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
+  const { user, loading } = useAuth();
+
+  // Auth loading check
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-80" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+      </div>
+    );
+  }
+
+  // Dashboard is open to all authenticated users
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="p-6">
       <div className="space-y-6">

@@ -83,18 +83,18 @@ function VerifyEmailContent() {
         description="Your account has been successfully verified and you're now logged in!"
       >
         <div className="text-center space-y-4">
-          <div className="bg-green-500/10 border border-green-500 text-green-400 px-4 py-3 rounded-md text-sm">
+          <div className="bg-emerald-500/10 border border-emerald-500 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-md text-sm">
             <p className="font-semibold mb-2">✓ Welcome aboard!</p>
-            <p className="text-xs">
+            <p className="text-xs opacity-80">
               You can now access all features of your dashboard.
             </p>
           </div>
-          <p className="text-slate-300 text-sm">
+          <p className="text-foreground text-sm">
             Redirecting to dashboard in 2 seconds...
           </p>
           <Button
             onClick={() => router.push('/dashboard')}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full"
           >
             Go to Dashboard Now
           </Button>
@@ -112,14 +112,14 @@ function VerifyEmailContent() {
       <div className="space-y-2">
         <Button
           onClick={() => router.push('/signin')}
-          className="w-full bg-blue-600 hover:bg-blue-700"
+          className="w-full"
         >
           Go to Sign In
         </Button>
         <Button
           onClick={() => router.push('/')}
           variant="outline"
-          className="w-full border-slate-700 hover:bg-slate-800"
+          className="w-full"
         >
           Back to Home
         </Button>

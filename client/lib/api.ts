@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { User, UserRole } from '@/models/user';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -21,12 +22,8 @@ export interface SigninData {
   password: string;
 }
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  emailVerified?: boolean;
-}
+// Export User from models
+export type { User, UserRole };
 
 export interface AuthResponse {
   message: string;

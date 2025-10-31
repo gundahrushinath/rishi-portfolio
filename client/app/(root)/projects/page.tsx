@@ -31,6 +31,10 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { usePermission } from '@/hooks/use-permission';
+import { Permission } from '@/models/user';
+import { NoAccess } from '@/components/auth/NoAccess';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Helper function for relative time
 const getRelativeTime = (date: string) => {
@@ -47,6 +51,14 @@ const getRelativeTime = (date: string) => {
 };
 
 export default function ProjectsPage() {
+  const { loading: authLoading } = useAuth();
+  
+  // Permission checks
+  const canRead = usePermission(Permission.PROJECT_READ);
+  const canCreate = usePermission(Permission.PROJECT_CREATE);
+  const canUpdate = usePermission(Permission.PROJECT_UPDATE);
+  const canDelete = usePermission(Permission.PROJECT_DELETE);
+  
   // Projects state
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,8 +88,11 @@ export default function ProjectsPage() {
 
   // Fetch projects on mount
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    // Only fetch if user has read permission and auth is loaded
+    if (!authLoading && canRead) {
+      fetchProjects();
+    }
+  }, [canRead, authLoading]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -98,13 +113,19 @@ export default function ProjectsPage() {
   }, [dialogOpen]);
 
   const fetchProjects = async () => {
+    // Only fetch if user has read permission
+    if (!canRead) return;
+    
     try {
       setIsLoading(true);
       const data = await projectService.getAll();
       setProjects(data.projects);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      toast.error('Failed to load projects');
+    } catch (error: any) {
+      // Don't show error if it's a 403 (permission denied) - we handle this with NoAccess component
+      if (error.response?.status !== 403) {
+        console.error('Error fetching projects:', error);
+        toast.error('Failed to load projects');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -194,6 +215,33 @@ export default function ProjectsPage() {
     }
   };
 
+  // Wait for auth to load before checking permissions
+  if (authLoading) {
+    return (
+      <div className="p-6">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has read permission
+  if (!canRead) {
+    return <NoAccess feature="Projects" permission="PROJECT_READ" />;
+  }
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -255,10 +303,12 @@ export default function ProjectsPage() {
               Manage and track your portfolio projects
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
+          )}
         </div>
 
         {/* Project Stats */}

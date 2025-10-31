@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { diaryService, DiaryInput } from '@/lib/api';
 import { Diary } from '@/models/dashboard';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from '@/lib/toast';
 import { Plus, Trash2, Edit2, X, CheckSquare, Square, TrendingUp } from 'lucide-react';
 import { MOOD_COLORS } from '@/lib/theme-colors';
+import { usePermission } from '@/hooks/use-permission';
+import { Permission } from '@/models/user';
+import { NoAccess } from '@/components/auth/NoAccess';
+import { useAuth } from '@/contexts/AuthContext';
 
 const MOOD_OPTIONS = ['Happy', 'Sad', 'Neutral', 'Excited', 'Anxious', 'Grateful', 'Tired', 'Motivated'] as const;
 const MOOD_EMOJIS: Record<string, string> = {
@@ -33,6 +38,15 @@ const MOOD_EMOJIS: Record<string, string> = {
 };
 
 export default function DiaryPage() {
+  const router = useRouter();
+  const { loading: authLoading } = useAuth();
+  
+  // Permission checks
+  const canRead = usePermission(Permission.DIARY_READ);
+  const canCreate = usePermission(Permission.DIARY_CREATE);
+  const canUpdate = usePermission(Permission.DIARY_UPDATE);
+  const canDelete = usePermission(Permission.DIARY_DELETE);
+
   // Helper function for relative time
   const getRelativeTime = (date: string) => {
     const now = new Date();
@@ -97,28 +111,43 @@ export default function DiaryPage() {
   }, [showForm]);
 
   useEffect(() => {
-    fetchDiaries();
-    fetchMoodStats();
-  }, []);
+    // Only fetch if user has read permission and auth is loaded
+    if (!authLoading && canRead) {
+      fetchDiaries();
+      fetchMoodStats();
+    }
+  }, [canRead, authLoading]);
 
   const fetchDiaries = async () => {
+    // Only fetch if user has read permission
+    if (!canRead) return;
+    
     try {
       setLoading(true);
       const response = await diaryService.getAll();
       setDiaries(response.diaries);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to fetch diary entries');
+      // Don't show error if it's a 403 (permission denied) - we handle this with NoAccess component
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || 'Failed to fetch diary entries');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchMoodStats = async () => {
+    // Only fetch if user has read permission
+    if (!canRead) return;
+    
     try {
       const response = await diaryService.getMoodStats();
       setMoodStats(response.stats);
     } catch (error: any) {
-      console.error('Failed to fetch mood stats:', error);
+      // Don't log error if it's a 403 (permission denied)
+      if (error.response?.status !== 403) {
+        console.error('Failed to fetch mood stats:', error);
+      }
     }
   };
 
@@ -249,6 +278,34 @@ export default function DiaryPage() {
     });
   };
 
+  // Wait for auth to load before checking permissions
+  if (authLoading) {
+    return (
+      <div className="p-6">
+        <div className="space-y-6">
+          {/* Header Skeleton */}
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has read permission
+  if (!canRead) {
+    return <NoAccess feature="Diary" permission="DIARY_READ" />;
+  }
+
   if (loading) {
     return (
       <div className="p-6">
@@ -309,10 +366,12 @@ export default function DiaryPage() {
             <TrendingUp className="mr-2 h-4 w-4" />
             {showStats ? 'Hide Stats' : 'Mood Stats'}
           </Button>
-          <Button onClick={() => setShowForm(!showForm)}>
-            {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
-            {showForm ? 'Cancel' : 'New Entry'}
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setShowForm(!showForm)}>
+              {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+              {showForm ? 'Cancel' : 'New Entry'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -549,30 +608,34 @@ export default function DiaryPage() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleEdit(diary)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Edit Entry</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setDiaryToDelete(diary._id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete Entry</TooltipContent>
-                      </Tooltip>
+                      {canUpdate && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleEdit(diary)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit Entry</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {canDelete && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setDiaryToDelete(diary._id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete Entry</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

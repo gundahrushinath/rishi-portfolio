@@ -75,7 +75,7 @@ export const COMPONENT_STYLES = {
   },
   
   // Auth card specific
-  authCard: 'w-full max-w-md bg-card/50 backdrop-blur-sm border shadow-xl',
+  authCard: 'w-full max-w-md bg-card/95 backdrop-blur-md border shadow-xl',
   
   // Button sizes (consistent)
   button: {
@@ -140,7 +140,7 @@ export const COLORS = {
 
 // Background Gradients
 export const GRADIENTS = {
-  auth: 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800',
+  auth: 'bg-gradient-to-br from-background via-muted/20 to-background',
   dashboard: 'bg-gradient-to-br from-background via-muted/10 to-background',
   hero: 'bg-gradient-to-b from-background via-background to-muted/20',
   card: 'bg-gradient-to-br from-card to-card/80',
