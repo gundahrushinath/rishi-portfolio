@@ -56,3 +56,17 @@ export const AUTH_STYLES = {
   link: 'text-blue-400 hover:text-blue-300',
   text: 'text-slate-400',
 } as const;
+
+export const NOTE_CATEGORY_OPTIONS = [
+  'Personal',
+  'Work',
+  'Study',
+  'Ideas',
+  'Code Snippet',
+  'Meeting',
+  'Other',
+] as const;
+
+export const TODO_PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Urgent'] as const;
+export const TODO_STATUS_OPTIONS = ['Todo', 'In Progress', 'Completed', 'Cancelled'] as const;
+export const TODO_CATEGORY_OPTIONS = ['Work', 'Personal', 'Study', 'Health', 'Shopping', 'Other'] as const;

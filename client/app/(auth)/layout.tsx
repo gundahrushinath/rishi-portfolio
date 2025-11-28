@@ -1,4 +1,4 @@
-import { GRADIENTS, COMPONENT_STYLES } from '@/lib/design-system';
+import { GRADIENTS } from '@/lib/design-system';
 
 export default function AuthLayout({
   children,

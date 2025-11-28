@@ -108,11 +108,11 @@ export default function RootGroupLayout({
     .toUpperCase() || 'U';
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="min-h-screen">
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-screen">
           {/* Sticky Topbar with ModeToggle and User Menu */}
           <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 px-6">
             <div className="flex-1">
@@ -175,12 +175,12 @@ export default function RootGroupLayout({
           </header>
 
           {/* Main Content Area - SPA behavior: only this section changes */}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1">
             {children}
           </main>
 
           {/* Sticky Footer */}
-          <footer className="sticky bottom-0 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 px-6 py-3">
+          <footer className="sticky bottom-0 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 px-6 py-3 mt-4">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <p>© 2025 Rishi Portfolio. All rights reserved.</p>
               <p>App v1.0</p>

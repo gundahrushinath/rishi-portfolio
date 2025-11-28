@@ -33,11 +33,12 @@ import {
   Shield,
 } from 'lucide-react';
 import { ICON_SIZES } from '@/lib/design-system';
+import { LucideIcon } from 'lucide-react';
 
 interface NavItem {
   title: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
   permission?: Permission;
   role?: UserRole;
   requireAdmin?: boolean;
@@ -248,7 +249,7 @@ function PermissionMenuItem({
 }: { 
   permission: Permission;
   href: string;
-  icon: any;
+  icon: LucideIcon;
   title: string;
 }) {
   const router = useRouter();

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, User } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface AuthContextType {
   user: User | null;
@@ -42,8 +43,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { user } = await authService.signin({ email, password });
       setUser(user);
       router.push('/dashboard');
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to sign in');
+    } catch (error) {
+      const message = axios.isAxiosError(error) 
+        ? error.response?.data?.message || 'Failed to sign in'
+        : 'Failed to sign in';
+      throw new Error(message);
     }
   };
 
@@ -52,8 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { user } = await authService.signup({ email, password, name });
       setUser(user);
       router.push('/dashboard');
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to sign up');
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || 'Failed to sign up'
+        : 'Failed to sign up';
+      throw new Error(message);
     }
   };
 
@@ -65,11 +72,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Signed out', {
         description: 'You have been successfully signed out.',
       });
-    } catch (error: any) {
+    } catch (error) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || 'Failed to sign out'
+        : 'Failed to sign out';
       toast.error('Sign out failed', {
-        description: error.response?.data?.message || 'Failed to sign out',
+        description: message,
       });
-      throw new Error(error.response?.data?.message || 'Failed to sign out');
+      throw new Error(message);
     }
   };
 

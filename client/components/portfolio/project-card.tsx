@@ -1,11 +1,5 @@
-import { Badge } from "@/components/portfolio/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/portfolio/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,68 +35,48 @@ export function ProjectCard({
   className,
 }: Props) {
   return (
-    <Card
-      className={
-        "flex flex-col overflow-hidden border hover:shadow-lg transition-all duration-300 ease-out h-full"
-      }
-    >
-      <Link
-        href={href || "#"}
-        className={cn("block cursor-pointer", className)}
-      >
-        {video && (
+    <Card className={cn("flex h-full flex-col overflow-hidden border bg-background", className)}>
+      <Link href={href || "#"} className="relative block h-48 overflow-hidden">
+        {video ? (
           <video
             src={video}
             autoPlay
             loop
             muted
             playsInline
-            className="pointer-events-none mx-auto h-40 w-full object-cover object-top" // needed because random black line at bottom of video
+            className="pointer-events-none h-full w-full object-cover"
           />
-        )}
-        {image && (
+        ) : image ? (
           <Image
             src={image}
             alt={title}
-            width={500}
-            height={300}
-            className="h-40 w-full overflow-hidden object-cover object-top"
+            fill
+            className="object-cover"
+            sizes="(max-width:768px) 100vw, 400px"
           />
-        )}
+        ) : null}
+        <div className="absolute inset-0 bg-linear-to-b from-transparent via-black/20 to-black/60" />
       </Link>
-      <CardHeader className="px-2">
-        <div className="space-y-1">
-          <CardTitle className="mt-1 text-base">{title}</CardTitle>
-          <time className="font-sans text-xs">{dates}</time>
-          <div className="hidden font-sans text-xs underline print:visible">
-            {link?.replace("https://", "").replace("www.", "").replace("/", "")}
-          </div>
-          <div className="prose max-w-full text-pretty font-sans text-xs text-muted-foreground dark:prose-invert">
-            <Markdown>{description}</Markdown>
-          </div>
+      <div className="flex flex-1 flex-col gap-4 p-4 text-white">
+        <div>
+          <div className="text-sm font-semibold opacity-80">{dates}</div>
+          <h3 className="text-xl font-semibold leading-tight">{title}</h3>
         </div>
-      </CardHeader>
-      <CardContent className="mt-auto flex flex-col px-2">
-        {tags && tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {tags?.map((tag) => (
-              <Badge
-                className="px-1 py-0 text-[10px]"
-                variant="secondary"
-                key={tag}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="px-2 pb-2">
+        <div className="text-sm text-white/80">
+          <Markdown>{description}</Markdown>
+        </div>
+        <div className="mt-auto flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="bg-white/10 text-white text-xs px-2 py-1">
+              {tag}
+            </Badge>
+          ))}
+        </div>
         {links && links.length > 0 && (
-          <div className="flex flex-row flex-wrap items-start gap-1">
-            {links?.map((link, idx) => (
-              <Link href={link?.href} key={idx} target="_blank">
-                <Badge key={idx} className="flex gap-2 px-2 py-1 text-[10px]">
+          <div className="flex flex-wrap gap-2 pt-2">
+            {links.map((link, idx) => (
+              <Link key={idx} href={link.href} target="_blank" className="text-xs font-medium text-white/80">
+                <Badge className="flex items-center gap-2 bg-white/20 text-white text-xs px-3 py-1">
                   {link.icon}
                   {link.type}
                 </Badge>
@@ -110,7 +84,7 @@ export function ProjectCard({
             ))}
           </div>
         )}
-      </CardFooter>
+      </div>
     </Card>
   );
 }

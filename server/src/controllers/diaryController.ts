@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Diary from '../models/Diary';
 import { AuthRequest } from '../middleware/auth';
 
-export const getDiaries = async (req: Request, res: Response) => {
+export const getEntries = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
@@ -11,36 +12,75 @@ export const getDiaries = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { mood, startDate, endDate, search, tags } = req.query;
-    
+    const {
+      search,
+      mood,
+      tags,
+      startDate,
+      endDate,
+      isFavorite,
+      sortBy = 'date',
+      order = 'desc',
+      page = '1',
+      limit = '20',
+    } = req.query;
+
     const filter: any = { userId };
-    
+
     if (mood) filter.mood = mood;
+    if (isFavorite !== undefined) filter.isFavorite = isFavorite === 'true';
+    
     if (tags) {
-      const tagArray = (tags as string).split(',');
+      const tagArray = (tags as string).split(',').map(t => t.trim());
       filter.tags = { $in: tagArray };
     }
+
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = new Date(startDate as string);
       if (endDate) filter.date.$lte = new Date(endDate as string);
     }
+
     if (search) {
-      filter.$text = { $search: search as string };
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+      ];
     }
 
-    const diaries = await Diary.find(filter)
-      .sort({ date: -1 })
-      .lean();
+    const sortOrder = order === 'asc' ? 1 : -1;
+    const sortObj: any = { [sortBy as string]: sortOrder };
 
-    res.status(200).json({ diaries });
+    const pageNum = Math.max(1, parseInt(page as string));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [entries, totalCount] = await Promise.all([
+      Diary.find(filter)
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Diary.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      entries,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        pages: Math.ceil(totalCount / limitNum),
+      },
+    });
   } catch (error) {
-    console.error('Error fetching diaries:', error);
-    res.status(500).json({ error: 'Failed to fetch diaries' });
+    console.error('Error fetching diary entries:', error);
+    res.status(500).json({ error: 'Failed to fetch diary entries' });
   }
 };
 
-export const createDiary = async (req: Request, res: Response) => {
+export const createEntry = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
@@ -49,110 +89,76 @@ export const createDiary = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { title, content, date, mood, weather, tags, isPrivate, location, images, gratitudeList, goals } = req.body;
+    const { title, content, mood, tags, date, isFavorite } = req.body;
 
-    if (!title || !title.trim()) {
-      return res.status(400).json({ error: 'Diary title is required' });
-    }
-
-    if (!content || !content.trim()) {
-      return res.status(400).json({ error: 'Diary content is required' });
-    }
-
-    const newDiary = new Diary({
+    const entry = await Diary.create({
       userId,
-      title: title.trim(),
-      content: content.trim(),
+      title,
+      content,
+      mood,
+      tags,
       date: date || new Date(),
-      mood: mood || 'Neutral',
-      weather: weather || '',
-      tags: Array.isArray(tags) ? tags : [],
-      isPrivate: isPrivate !== undefined ? isPrivate : true,
-      location: location || '',
-      images: Array.isArray(images) ? images : [],
-      gratitudeList: Array.isArray(gratitudeList) ? gratitudeList : [],
-      goals: Array.isArray(goals) ? goals : [],
+      isFavorite,
     });
 
-    await newDiary.save();
-
-    res.status(201).json({
-      message: 'Diary entry created successfully',
-      diary: newDiary,
-    });
+    res.status(201).json(entry);
   } catch (error) {
-    console.error('Error creating diary:', error);
+    console.error('Error creating diary entry:', error);
     res.status(500).json({ error: 'Failed to create diary entry' });
   }
 };
 
-export const updateDiary = async (req: Request, res: Response) => {
+export const updateEntry = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
+    const { id } = req.params;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { id } = req.params;
-    const { title, content, date, mood, weather, tags, isPrivate, location, images, gratitudeList, goals } = req.body;
+    const entry = await Diary.findOneAndUpdate(
+      { _id: id, userId },
+      req.body,
+      { new: true, runValidators: true }
+    );
 
-    const diary = await Diary.findOne({ _id: id, userId });
-
-    if (!diary) {
+    if (!entry) {
       return res.status(404).json({ error: 'Diary entry not found' });
     }
 
-    if (title !== undefined) diary.title = title.trim();
-    if (content !== undefined) diary.content = content.trim();
-    if (date !== undefined) diary.date = new Date(date);
-    if (mood !== undefined) diary.mood = mood;
-    if (weather !== undefined) diary.weather = weather;
-    if (tags !== undefined) diary.tags = Array.isArray(tags) ? tags : [];
-    if (isPrivate !== undefined) diary.isPrivate = isPrivate;
-    if (location !== undefined) diary.location = location;
-    if (images !== undefined) diary.images = Array.isArray(images) ? images : [];
-    if (gratitudeList !== undefined) diary.gratitudeList = Array.isArray(gratitudeList) ? gratitudeList : [];
-    if (goals !== undefined) diary.goals = Array.isArray(goals) ? goals : [];
-
-    await diary.save();
-
-    res.status(200).json({
-      message: 'Diary entry updated successfully',
-      diary,
-    });
+    res.status(200).json(entry);
   } catch (error) {
-    console.error('Error updating diary:', error);
+    console.error('Error updating diary entry:', error);
     res.status(500).json({ error: 'Failed to update diary entry' });
   }
 };
 
-export const deleteDiary = async (req: Request, res: Response) => {
+export const deleteEntry = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
+    const { id } = req.params;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { id } = req.params;
+    const entry = await Diary.findOneAndDelete({ _id: id, userId });
 
-    const result = await Diary.deleteOne({ _id: id, userId });
-
-    if (result.deletedCount === 0) {
+    if (!entry) {
       return res.status(404).json({ error: 'Diary entry not found' });
     }
 
     res.status(200).json({ message: 'Diary entry deleted successfully' });
   } catch (error) {
-    console.error('Error deleting diary:', error);
+    console.error('Error deleting diary entry:', error);
     res.status(500).json({ error: 'Failed to delete diary entry' });
   }
 };
 
-export const getDiaryById = async (req: Request, res: Response) => {
+export const getStats = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
@@ -161,39 +167,29 @@ export const getDiaryById = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { id } = req.params;
-
-    const diary = await Diary.findOne({ _id: id, userId });
-
-    if (!diary) {
-      return res.status(404).json({ error: 'Diary entry not found' });
-    }
-
-    res.status(200).json({ diary });
-  } catch (error) {
-    console.error('Error fetching diary:', error);
-    res.status(500).json({ error: 'Failed to fetch diary entry' });
-  }
-};
-
-export const getMoodStats = async (req: Request, res: Response) => {
-  try {
-    const authReq = req as AuthRequest;
-    const userId = authReq.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+    const totalEntries = await Diary.countDocuments({ userId });
+    
+    // Get mood distribution
     const moodStats = await Diary.aggregate([
-      { $match: { userId: userId as any } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       { $group: { _id: '$mood', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
     ]);
 
-    res.status(200).json({ moodStats });
+    // Get entries this month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const entriesThisMonth = await Diary.countDocuments({
+      userId,
+      date: { $gte: startOfMonth },
+    });
+
+    res.status(200).json({
+      totalEntries,
+      moodStats,
+      entriesThisMonth,
+    });
   } catch (error) {
-    console.error('Error fetching mood stats:', error);
-    res.status(500).json({ error: 'Failed to fetch mood statistics' });
+    console.error('Error fetching diary stats:', error);
+    res.status(500).json({ error: 'Failed to fetch diary stats' });
   }
 };

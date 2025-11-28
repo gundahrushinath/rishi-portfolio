@@ -3,6 +3,7 @@ import { Inter as FontSans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/portfolio/theme-provider";
+import { PersonalizationInitializer } from "@/components/layout/PersonalizationInitializer";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <PersonalizationInitializer />
           <AuthProvider>
             {children}
           </AuthProvider>

@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermission } from '@/hooks/use-permission';
 import { NoAccess } from '@/components/auth/NoAccess';
@@ -15,9 +17,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -29,11 +40,29 @@ import {
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 import { Permission } from '@/models/user';
+import {
+  PERSONALIZATION_STORAGE_KEY,
+  accentOptions,
+  accentSamples,
+  applyPersonalizationToDocument,
+  defaultPersonalizationPrefs,
+  mergePersonalizationPrefs,
+  type PersonalizationPreferences,
+} from '@/lib/personalization';
 
 export default function SettingsPage() {
   const { user, updateUser, loading } = useAuth();
   const canRead = usePermission(Permission.SETTINGS_READ);
   const canUpdate = usePermission(Permission.SETTINGS_UPDATE);
+
+  const NOTIFICATION_STORAGE_KEY = 'dashboard-notification-preferences';
+
+  const defaultNotificationPrefs = {
+    emailUpdates: true,
+    projectDigest: true,
+    securityAlerts: true,
+    productNews: false,
+  } as const;
 
   // Username state
   const [username, setUsername] = useState('');
@@ -49,6 +78,133 @@ export default function SettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Preference state
+  const [notificationPrefs, setNotificationPrefs] = useState<typeof defaultNotificationPrefs>(defaultNotificationPrefs);
+  const [personalizationPrefs, setPersonalizationPrefs] = useState<PersonalizationPreferences>(defaultPersonalizationPrefs);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsSavedAt, setPrefsSavedAt] = useState<Date | null>(null);
+  const [prefsReady, setPrefsReady] = useState(false);
+  const { setTheme } = useTheme();
+
+  const notificationSettings = [
+    {
+      key: 'emailUpdates' as const,
+      title: 'Email notifications',
+      description: 'Receive actionable updates about your workspace and invites.',
+    },
+    {
+      key: 'projectDigest' as const,
+      title: 'Weekly project digest',
+      description: 'Get a summary of progress, blockers, and achievements every Monday.',
+    },
+    {
+      key: 'securityAlerts' as const,
+      title: 'Security alerts',
+      description: 'Be notified instantly if we detect unusual sign-in activity.',
+    },
+    {
+      key: 'productNews' as const,
+      title: 'Product announcements',
+      description: 'Hear about new features, beta programs, and upcoming events.',
+    },
+  ];
+
+  const preferenceStatus = useMemo(() => {
+    if (!prefsReady) {
+      return 'Loading settings…';
+    }
+    if (prefsSaving) {
+      return 'Saving your preferences…';
+    }
+    if (prefsSavedAt) {
+      return `Preferences saved ${prefsSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    return 'Preferences are up to date.';
+  }, [prefsReady, prefsSaving, prefsSavedAt]);
+
+  const handleNotificationToggle = (key: keyof typeof defaultNotificationPrefs) => {
+    setNotificationPrefs((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handlePersonalizationChange = <K extends keyof PersonalizationPreferences>(
+    field: K,
+    value: PersonalizationPreferences[K],
+  ) => {
+    setPersonalizationPrefs((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const planLabel = useMemo(() => {
+    if (!user) return 'Personal Plan';
+    return user.role === 'admin' ? 'Admin Workspace' : 'Personal Plan';
+  }, [user]);
+
+  const memberSince = useMemo(() => {
+    if (!user?.createdAt) return '—';
+    try {
+      return new Date(user.createdAt).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return '—';
+    }
+  }, [user?.createdAt]);
+
+  const quickActions = [
+    { label: 'View profile', href: '/profile' },
+    { label: 'Review diary', href: '/diary' },
+    { label: 'Manage projects', href: '/projects' },
+    { label: 'Create note', href: '/notes' },
+  ];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedNotifications = window.localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+      const storedPersonalization = window.localStorage.getItem(PERSONALIZATION_STORAGE_KEY);
+
+      if (storedNotifications) {
+        setNotificationPrefs({ ...defaultNotificationPrefs, ...JSON.parse(storedNotifications) });
+      }
+
+      if (storedPersonalization) {
+        setPersonalizationPrefs(mergePersonalizationPrefs(JSON.parse(storedPersonalization)));
+      }
+    } catch (error) {
+      console.error('Failed to hydrate settings preferences', error);
+    } finally {
+      setPrefsReady(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!prefsReady) return;
+    applyPersonalizationToDocument(personalizationPrefs);
+    setTheme(personalizationPrefs.theme);
+  }, [personalizationPrefs, prefsReady, setTheme]);
+
+  useEffect(() => {
+    if (!prefsReady || typeof window === 'undefined') return;
+
+    setPrefsSaving(true);
+    const timeout = window.setTimeout(() => {
+      window.localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notificationPrefs));
+      window.localStorage.setItem(PERSONALIZATION_STORAGE_KEY, JSON.stringify(personalizationPrefs));
+      setPrefsSaving(false);
+      setPrefsSavedAt(new Date());
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [notificationPrefs, personalizationPrefs, prefsReady]);
 
   // Auth loading check
   if (loading) {
@@ -168,6 +324,61 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">
                   Manage your account preferences and security settings
                 </p>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Current plan</CardDescription>
+                    <CardTitle className="text-lg">{planLabel}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground">
+                    <p>Member since {memberSince}</p>
+                    <p className="mt-1">Email: {user?.email}</p>
+                  </CardContent>
+                  <CardFooter className="flex gap-2">
+                    <Button asChild size="sm" variant="outline">
+                      <Link href="/profile">Update profile</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost">
+                      <Link href="/dashboard">Go to overview</Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Security snapshot</CardDescription>
+                    <CardTitle className="text-lg">Good standing</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span>Password strength</span>
+                      <Badge variant="outline">Healthy</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Two-factor auth</span>
+                      <Badge variant="secondary">Coming soon</Badge>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <p className="text-xs text-muted-foreground">Stay alerted with security notifications for unusual sign-ins.</p>
+                  </CardFooter>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Quick actions</CardDescription>
+                    <CardTitle className="text-lg">Jump back in</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-2">
+                    {quickActions.map((action) => (
+                      <Button asChild key={action.href} variant="secondary" size="sm">
+                        <Link href={action.href}>{action.label}</Link>
+                      </Button>
+                    ))}
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Account Settings */}
@@ -290,26 +501,99 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Email Notifications</p>
-                      <p className="text-sm text-muted-foreground">
-                        Receive updates about your projects via email
-                      </p>
+                  {notificationSettings.map((setting, index) => (
+                    <div key={setting.key} className="space-y-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-medium capitalize">{setting.title}</p>
+                          <p className="text-sm text-muted-foreground">{setting.description}</p>
+                        </div>
+                        <Switch
+                          checked={notificationPrefs[setting.key]}
+                          onCheckedChange={() => handleNotificationToggle(setting.key)}
+                          disabled={!canUpdate}
+                        />
+                      </div>
+                      {index < notificationSettings.length - 1 && <Separator />}
                     </div>
-                    <Button variant="outline" size="sm">Enable</Button>
+                  ))}
+                </CardContent>
+                <CardFooter className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                  <p>{preferenceStatus}</p>
+                  {!canUpdate && <span>Read-only: insufficient permission.</span>}
+                </CardFooter>
+              </Card>
+
+              {/* Personalization Settings */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-5 w-5" />
+                    <CardTitle>Personalization</CardTitle>
                   </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Project Updates</p>
-                      <p className="text-sm text-muted-foreground">
-                        Get notified about new resources and features
-                      </p>
+                  <CardDescription>
+                    Tailor the dashboard to match your working style
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Theme preference</Label>
+                      <Select
+                        value={personalizationPrefs.theme}
+                        onValueChange={(value) => handlePersonalizationChange('theme', value as typeof personalizationPrefs.theme)}
+                        disabled={!canUpdate}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select theme" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="system">Match system</SelectItem>
+                          <SelectItem value="light">Light</SelectItem>
+                          <SelectItem value="dark">Dark</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Button variant="outline" size="sm">Enable</Button>
+
+                    <div className="space-y-2">
+                      <Label>Interface density</Label>
+                      <Select
+                        value={personalizationPrefs.density}
+                        onValueChange={(value) => handlePersonalizationChange('density', value as typeof personalizationPrefs.density)}
+                        disabled={!canUpdate}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select density" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="comfortable">Comfortable</SelectItem>
+                          <SelectItem value="compact">Compact</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label>Accent color</Label>
+                    <div className="flex flex-wrap gap-3">
+                      {accentOptions.map((accent) => (
+                        <button
+                          key={accent}
+                          type="button"
+                          disabled={!canUpdate}
+                          aria-label={`Use ${accent} accent`}
+                          className={`h-9 w-9 rounded-full border-2 transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 ${
+                            personalizationPrefs.accent === accent ? 'border-primary ring-2 ring-primary/40' : 'border-border'
+                          } ${accentSamples[accent]}`}
+                          onClick={() => handlePersonalizationChange('accent', accent)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
+                <CardFooter className="text-xs text-muted-foreground">
+                  Personalization preferences are stored on this device.
+                </CardFooter>
               </Card>
 
               {/* Privacy Settings */}

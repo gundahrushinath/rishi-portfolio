@@ -1,12 +1,12 @@
 import { Dock, DockIcon } from "@/components/portfolio/magicui/dock";
 import { ModeToggle } from "@/components/portfolio/mode-toggle";
-import { buttonVariants } from "@/components/portfolio/ui/button";
-import { Separator } from "@/components/portfolio/ui/separator";
+import { buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/portfolio/ui/tooltip";
+} from "@/components/ui/tooltip";
 import { DATA } from "@/data/resume";
 import { cn } from "@/lib/utils";
 import Link from "next/link";

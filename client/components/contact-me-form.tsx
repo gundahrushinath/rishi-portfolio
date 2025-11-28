@@ -1,5 +1,5 @@
 "use client";
-import { Button } from "@/components/portfolio/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import * as z from "zod";
 
 const formSchema = z.object({
+  name: z.string().nonempty("Name is required"),
   email: z.string().nonempty("Email is required").email("Invalid email format"),
   message: z.string().nonempty("Message is required"),
 });
@@ -24,6 +25,7 @@ export default function ContactMeForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: "",
       email: "",
       message: "",
     },
@@ -41,11 +43,10 @@ export default function ContactMeForm() {
 
     const errors = form.formState.errors;
 
-    if (errors.email || errors.message) {
+    if (errors.name || errors.email || errors.message) {
+      const missingField = errors.name ? "name" : errors.email ? "email" : "message";
       toast.error("You forgot something!", {
-        description: `Looks like you forgot to enter a valid ${
-          errors.email ? "email" : "message"
-        }.`,
+        description: `Looks like you forgot to enter a valid ${missingField}.`,
       });
     }
   };
@@ -69,6 +70,21 @@ export default function ContactMeForm() {
         method="POST"
         className="space-y-8 max-w-3xl mx-auto py-10"
       >
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex flex-col gap-y-2 items-start">
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="John Doe" {...field} />
+                </FormControl>
+              </div>
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="email"

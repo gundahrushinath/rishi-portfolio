@@ -35,10 +35,20 @@ export interface Project {
   userId: string;
   title: string;
   description: string;
-  status: 'Active' | 'In Progress' | 'Completed';
+  status: 'Active' | 'In Progress' | 'Completed' | 'On Hold' | 'Cancelled';
+  priority?: 'Low' | 'Medium' | 'High' | 'Critical';
   tags: string[];
   dueDate?: string;
+  startDate?: string;
+  completedDate?: string;
   link?: string;
+  githubUrl?: string;
+  liveUrl?: string;
+  technologies?: string[];
+  progress?: number;
+  notes?: string;
+  isFeatured?: boolean;
+  isArchived?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -46,10 +56,43 @@ export interface Project {
 export interface ProjectInput {
   title: string;
   description?: string;
-  status?: 'Active' | 'In Progress' | 'Completed';
+  status?: 'Active' | 'In Progress' | 'Completed' | 'On Hold' | 'Cancelled';
+  priority?: 'Low' | 'Medium' | 'High' | 'Critical';
   tags?: string[];
   dueDate?: string;
+  startDate?: string;
   link?: string;
+  githubUrl?: string;
+  liveUrl?: string;
+  technologies?: string[];
+  progress?: number;
+  notes?: string;
+  isFeatured?: boolean;
+  isArchived?: boolean;
+}
+
+export interface ProjectFilters {
+  status?: string;
+  priority?: string;
+  search?: string;
+  tags?: string;
+  isFeatured?: boolean;
+  isArchived?: boolean;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface ProjectStats {
+  byStatus: { _id: string; count: number }[];
+  byPriority: { _id: string; count: number }[];
+  overall: {
+    total: number;
+    avgProgress: number;
+    featured: number;
+    archived: number;
+  }[];
 }
 
 export interface Resource {
@@ -110,14 +153,9 @@ export interface Diary {
   title: string;
   content: string;
   date: string;
-  mood: 'Happy' | 'Sad' | 'Neutral' | 'Excited' | 'Anxious' | 'Grateful' | 'Tired' | 'Motivated';
-  weather?: string;
+  mood: 'Happy' | 'Neutral' | 'Sad' | 'Excited' | 'Tired' | 'Stressed' | 'Grateful';
   tags: string[];
-  isPrivate: boolean;
-  location?: string;
-  images: string[];
-  gratitudeList: string[];
-  goals: { description: string; completed: boolean }[];
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -127,13 +165,37 @@ export interface DiaryInput {
   content: string;
   date?: string;
   mood?: string;
-  weather?: string;
   tags?: string[];
-  isPrivate?: boolean;
-  location?: string;
-  images?: string[];
-  gratitudeList?: string[];
-  goals?: { description: string; completed: boolean }[];
+  isFavorite?: boolean;
+}
+
+export interface DiaryFilters {
+  search?: string;
+  mood?: string;
+  tags?: string;
+  startDate?: string;
+  endDate?: string;
+  isFavorite?: boolean;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface DiaryStatsSummary {
+  totalEntries: number;
+  moodStats: { _id: string; count: number }[];
+  entriesThisMonth: number;
+}
+
+export interface DiaryListResponse {
+  entries: Diary[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface Todo {
@@ -195,8 +257,8 @@ export const authService = {
 };
 
 export const projectService = {
-  getAll: async (): Promise<{ projects: Project[] }> => {
-    const response = await api.get('/projects');
+  getAll: async (filters?: ProjectFilters): Promise<{ projects: Project[]; pagination?: any }> => {
+    const response = await api.get('/projects', { params: filters });
     return response.data;
   },
 
@@ -217,6 +279,21 @@ export const projectService = {
 
   delete: async (id: string): Promise<{ message: string }> => {
     const response = await api.delete(`/projects/${id}`);
+    return response.data;
+  },
+
+  getStats: async (): Promise<{ stats: ProjectStats }> => {
+    const response = await api.get('/projects/stats');
+    return response.data;
+  },
+
+  bulkUpdate: async (projectIds: string[], updates: Partial<ProjectInput>): Promise<{ message: string; modifiedCount: number }> => {
+    const response = await api.patch('/projects/bulk', { projectIds, updates });
+    return response.data;
+  },
+
+  bulkDelete: async (projectIds: string[]): Promise<{ message: string; deletedCount: number }> => {
+    const response = await api.delete('/projects/bulk', { data: { projectIds } });
     return response.data;
   },
 };
@@ -281,7 +358,7 @@ export const noteService = {
 };
 
 export const diaryService = {
-  getAll: async (filters?: { mood?: string; startDate?: string; endDate?: string }): Promise<{ diaries: Diary[] }> => {
+  getAll: async (filters?: DiaryFilters): Promise<DiaryListResponse> => {
     const response = await api.get('/diaries', { params: filters });
     return response.data;
   },
@@ -306,8 +383,8 @@ export const diaryService = {
     return response.data;
   },
 
-  getMoodStats: async (): Promise<{ stats: { mood: string; count: number }[] }> => {
-    const response = await api.get('/diaries/stats/mood');
+  getStats: async (): Promise<DiaryStatsSummary> => {
+    const response = await api.get('/diaries/stats');
     return response.data;
   },
 };

@@ -4,18 +4,10 @@ export interface IDiary extends Document {
   userId: mongoose.Types.ObjectId;
   title: string;
   content: string;
-  date: Date;
-  mood: 'Happy' | 'Sad' | 'Neutral' | 'Excited' | 'Anxious' | 'Grateful' | 'Tired' | 'Motivated';
-  weather?: string;
+  mood: 'Happy' | 'Neutral' | 'Sad' | 'Excited' | 'Tired' | 'Stressed' | 'Grateful';
   tags: string[];
-  isPrivate: boolean;
-  location?: string;
-  images: string[];
-  gratitudeList: string[];
-  goals: {
-    description: string;
-    completed: boolean;
-  }[];
+  date: Date;
+  isFavorite: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,76 +22,47 @@ const diarySchema = new Schema<IDiary>(
     },
     title: {
       type: String,
-      required: [true, 'Diary title is required'],
+      required: [true, 'Title is required'],
       trim: true,
       maxlength: [200, 'Title cannot exceed 200 characters'],
     },
     content: {
       type: String,
-      required: [true, 'Diary content is required'],
-      maxlength: [100000, 'Content cannot exceed 100000 characters'],
-    },
-    date: {
-      type: Date,
-      required: true,
-      index: true,
+      required: [true, 'Content is required'],
+      trim: true,
     },
     mood: {
       type: String,
-      enum: ['Happy', 'Sad', 'Neutral', 'Excited', 'Anxious', 'Grateful', 'Tired', 'Motivated'],
+      enum: ['Happy', 'Neutral', 'Sad', 'Excited', 'Tired', 'Stressed', 'Grateful'],
       default: 'Neutral',
-    },
-    weather: {
-      type: String,
-      trim: true,
+      index: true,
     },
     tags: {
       type: [String],
       default: [],
       validate: {
         validator: function (tags: string[]) {
-          return tags.length <= 15;
+          return tags.length <= 10;
         },
-        message: 'Cannot have more than 15 tags',
+        message: 'Cannot have more than 10 tags',
       },
     },
-    isPrivate: {
+    date: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
+    isFavorite: {
       type: Boolean,
-      default: true,
+      default: false,
     },
-    location: {
-      type: String,
-      trim: true,
-    },
-    images: {
-      type: [String],
-      default: [],
-    },
-    gratitudeList: {
-      type: [String],
-      default: [],
-    },
-    goals: [{
-      description: {
-        type: String,
-        required: true,
-      },
-      completed: {
-        type: Boolean,
-        default: false,
-      },
-    }],
   },
   {
     timestamps: true,
   }
 );
 
-// Indexes for faster queries
-diarySchema.index({ userId: 1, date: -1 });
-diarySchema.index({ userId: 1, mood: 1 });
+// Index for searching
 diarySchema.index({ title: 'text', content: 'text', tags: 'text' });
 
-const Diary = mongoose.model<IDiary>('Diary', diarySchema);
-
-export default Diary;
+export default mongoose.model<IDiary>('Diary', diarySchema);
